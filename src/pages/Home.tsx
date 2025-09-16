@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LinkStatusPopup } from "@/components/ui/link-status-popup"
-import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
+
 import { useUrlScanner } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 
@@ -140,12 +140,6 @@ export default function Home() {
           </CardContent>
         </Card>
 
-        {scanResult?.safe && (
-          <LinkIntegrityCard 
-            url={scanResult.url} 
-            onOpenLink={handleOpenLink}
-          />
-        )}
       </div>
 
       <LinkStatusPopup
