@@ -24,7 +24,7 @@ export function LinkStatusPopup({
   if (!isVisible) return null
 
   return (
-    <div className="fixed inset-x-4 top-20 z-50 mx-auto max-w-lg">
+    <div className="fixed inset-x-4 top-60 z-50 mx-auto max-w-lg">
       <Card className={cn(
         "shadow-lg border-2 transition-all duration-300",
         result?.safe ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-red-500 bg-red-50 dark:bg-red-950",

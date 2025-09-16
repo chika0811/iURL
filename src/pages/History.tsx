@@ -7,8 +7,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScanResult } from "@/hooks/use-url-scanner"
 
+interface HistoryItem extends ScanResult {
+  count?: number
+}
+
 export default function History() {
-  const [history, setHistory] = useState<ScanResult[]>([])
+  const [history, setHistory] = useState<HistoryItem[]>([])
 
   useEffect(() => {
     const savedHistory = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
@@ -42,7 +46,7 @@ export default function History() {
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-6 max-w-lg mx-auto text-center">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold text-primary">Safe Links History</h1>
           {history.length > 0 && (
@@ -70,13 +74,20 @@ export default function History() {
           <div className="space-y-3">
             {history.map((item, index) => (
               <Card key={index} className="p-4">
-                <div className="flex items-center space-x-3 mb-3">
-                  <Badge className="bg-green-600 text-white">
-                    ✓ Safe
-                  </Badge>
-                  <span className="text-sm text-muted-foreground">
-                    {formatTimestamp(item.timestamp)}
-                  </span>
+                <div className="flex items-center justify-between mb-3">
+                  <div className="flex items-center space-x-3">
+                    <Badge className="bg-green-600 text-white">
+                      ✓ Safe
+                    </Badge>
+                    <span className="text-sm text-muted-foreground">
+                      {formatTimestamp(item.timestamp)}
+                    </span>
+                  </div>
+                  {item.count && item.count > 1 && (
+                    <Badge variant="secondary" className="text-xs">
+                      {item.count}x checked
+                    </Badge>
+                  )}
                 </div>
                 <div className="mb-3">
                   <p className="text-sm text-muted-foreground break-all">{item.url}</p>

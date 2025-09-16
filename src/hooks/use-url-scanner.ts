@@ -48,12 +48,24 @@ export function useUrlScanner() {
     
     localStorage.setItem('iurl-daily-stats', JSON.stringify(stats))
     
-    // Save to history if safe
-    if (isSafe) {
-      const history = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
-      history.unshift(result)
-      localStorage.setItem('iurl-safe-history', JSON.stringify(history.slice(0, 100))) // Keep last 100
-    }
+      // Save to history if safe
+      if (result.safe) {
+        const history = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
+        const existingIndex = history.findIndex((item: ScanResult & { count?: number }) => item.url === result.url)
+        
+        if (existingIndex >= 0) {
+          // Update count and move to top
+          history[existingIndex].count = (history[existingIndex].count || 1) + 1
+          history[existingIndex].timestamp = result.timestamp
+          const updatedItem = history.splice(existingIndex, 1)[0]
+          history.unshift(updatedItem)
+        } else {
+          // Add new item with count 1
+          history.unshift({ ...result, count: 1 })
+        }
+        
+        localStorage.setItem('iurl-safe-history', JSON.stringify(history.slice(0, 50))) // Keep last 50
+      }
     
     // Show toast notification
     toast({

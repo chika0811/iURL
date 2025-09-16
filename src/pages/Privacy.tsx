@@ -8,7 +8,7 @@ export default function Privacy() {
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-6 max-w-lg mx-auto text-center">
         <h1 className="text-2xl font-bold text-primary">Privacy Policy</h1>
 
         {/* Privacy Statement */}

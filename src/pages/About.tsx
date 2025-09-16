@@ -40,7 +40,7 @@ export default function About() {
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-6 max-w-lg mx-auto text-center">
         {/* App Info Section */}
         <div className="text-center space-y-4">
           <div className="bg-primary rounded-3xl p-8 mx-auto w-fit">

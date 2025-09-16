@@ -58,7 +58,7 @@ export default function Home() {
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-6 max-w-lg mx-auto text-center">
         {/* Real-time Protection Section */}
         <Card>
           <CardContent className="p-6">
@@ -91,7 +91,7 @@ export default function Home() {
                   <ShieldX className="h-4 w-4 text-destructive" />
                   <span className="text-sm text-muted-foreground">Blocked</span>
                 </div>
-                <div className="text-2xl font-bold text-destructive">{stats.threatsBlocked}</div>
+                <div className="text-2xl font-bold">{stats.threatsBlocked}</div>
                 <div className="text-sm text-muted-foreground">Threats Stopped</div>
               </div>
             </div>

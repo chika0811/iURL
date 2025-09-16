@@ -1,4 +1,4 @@
-import { Shield, Clipboard, Info } from "lucide-react"
+import { Shield, Clipboard, Info, Lock } from "lucide-react"
 import { Link, useLocation } from "react-router-dom"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +17,11 @@ const navigation = [
     name: "About",
     href: "/about",
     icon: Info,
+  },
+  {
+    name: "Privacy",
+    href: "/privacy",
+    icon: Lock,
   },
 ]
 
