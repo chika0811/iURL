@@ -6,27 +6,47 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { LinkStatusPopup } from "@/components/ui/link-status-popup"
+import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
 import { useUrlScanner } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 
 export default function Home() {
   const [url, setUrl] = useState("")
   const [isProtectionActive, setIsProtectionActive] = useState(true)
+  const [showPopup, setShowPopup] = useState(false)
+  const [scanResult, setScanResult] = useState<any>(null)
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
 
   const handleScanUrl = async () => {
     if (!url.trim()) return
     
+    setShowPopup(true)
+    setScanResult(null)
+    
     try {
       const result = await scanUrl(url.trim())
-      if (result.safe) {
-        window.open(result.url, '_blank')
-      }
-      setUrl("")
+      setScanResult(result)
     } catch (error) {
       console.error("Error scanning URL:", error)
+      setShowPopup(false)
     }
+  }
+
+  const handleOpenLink = () => {
+    if (scanResult?.url) {
+      window.open(scanResult.url, '_blank')
+      setShowPopup(false)
+      setScanResult(null)
+      setUrl("")
+    }
+  }
+
+  const handleClosePopup = () => {
+    setShowPopup(false)
+    setScanResult(null)
+    setUrl("")
   }
 
   const handleQrScan = () => {
@@ -119,7 +139,22 @@ export default function Home() {
             </div>
           </CardContent>
         </Card>
+
+        {scanResult?.safe && (
+          <LinkIntegrityCard 
+            url={scanResult.url} 
+            onOpenLink={handleOpenLink}
+          />
+        )}
       </div>
+
+      <LinkStatusPopup
+        isVisible={showPopup}
+        isLoading={isScanning}
+        result={scanResult}
+        onClose={handleClosePopup}
+        onOpenLink={handleOpenLink}
+      />
 
       <BottomNavigation />
     </div>
