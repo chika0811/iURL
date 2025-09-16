@@ -148,14 +148,6 @@ export default function Home() {
         )}
       </div>
 
-      <LinkStatusPopup
-        isVisible={showPopup}
-        isLoading={isScanning}
-        result={scanResult}
-        onClose={handleClosePopup}
-        onOpenLink={handleOpenLink}
-      />
-
       <BottomNavigation />
     </div>
   )
