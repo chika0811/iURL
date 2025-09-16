@@ -122,7 +122,7 @@ export default function About() {
             </div>
             
             <div className="flex space-x-3 pt-2">
-              <Button onClick={handleCall} className="flex-1">
+              <Button onClick={handleCall} variant="outline" className="flex-1">
                 <Phone className="mr-2 h-4 w-4" />
                 Call
               </Button>
