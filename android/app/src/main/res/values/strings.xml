@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">iURL</string>
+    <string name="title_activity_main">iURL - Smart Link Protection</string>
+    <string name="package_name">app.lovable.193b71eb3ad64c31be3bdf652c7cc0c8</string>
+    <string name="custom_url_scheme">iurl</string>
+</resources>
