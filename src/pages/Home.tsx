@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { QrCode, Shield, TrendingUp, ShieldX } from "lucide-react"
 import { AppHeader } from "@/components/layout/app-header"
 import { BottomNavigation } from "@/components/layout/bottom-navigation"
@@ -8,16 +8,44 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LinkStatusPopup } from "@/components/ui/link-status-popup"
 import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
+import { QrScanner } from "@/components/qr-scanner"
 import { useUrlScanner } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
+import { useBackgroundService } from "@/hooks/use-background-service"
 
 export default function Home() {
   const [url, setUrl] = useState("")
   const [isProtectionActive, setIsProtectionActive] = useState(true)
   const [showPopup, setShowPopup] = useState(false)
   const [scanResult, setScanResult] = useState<any>(null)
+  const [showQrScanner, setShowQrScanner] = useState(false)
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
+  const { startBackgroundProtection, stopBackgroundProtection } = useBackgroundService()
+
+  useEffect(() => {
+    // Listen for URL scan requests from notifications
+    const handleScanFromNotification = (event: CustomEvent) => {
+      setUrl(event.detail.url)
+      handleScanUrl()
+    }
+
+    window.addEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
+    
+    return () => {
+      window.removeEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
+    }
+  }, [])
+
+  const handleToggleProtection = async () => {
+    if (isProtectionActive) {
+      await stopBackgroundProtection()
+      setIsProtectionActive(false)
+    } else {
+      await startBackgroundProtection()
+      setIsProtectionActive(true)
+    }
+  }
 
   const handleScanUrl = async () => {
     if (!url.trim()) return
@@ -50,8 +78,20 @@ export default function Home() {
   }
 
   const handleQrScan = () => {
-    // In a real app, this would open camera for QR scanning
-    alert("QR Scanner would open camera here. This is a demo.")
+    setShowQrScanner(true)
+  }
+
+  const handleQrResult = (scannedUrl: string) => {
+    setUrl(scannedUrl)
+    setShowQrScanner(false)
+    // Auto-scan the detected URL
+    setTimeout(() => {
+      handleScanUrl()
+    }, 500)
+  }
+
+  const handleCloseQrScanner = () => {
+    setShowQrScanner(false)
   }
 
   return (
@@ -69,7 +109,7 @@ export default function Home() {
               </div>
               <Button
                 variant={isProtectionActive ? "default" : "outline"}
-                onClick={() => setIsProtectionActive(!isProtectionActive)}
+                onClick={handleToggleProtection}
                 className="px-6"
               >
                 {isProtectionActive ? "Active" : "Activate"}
@@ -147,6 +187,13 @@ export default function Home() {
           />
         )}
       </div>
+
+      {showQrScanner && (
+        <QrScanner
+          onResult={handleQrResult}
+          onClose={handleCloseQrScanner}
+        />
+      )}
 
       <BottomNavigation />
     </div>
