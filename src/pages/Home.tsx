@@ -16,6 +16,7 @@ import { useBackgroundService } from "@/hooks/use-background-service"
 export default function Home() {
   const [url, setUrl] = useState("")
   const [isProtectionActive, setIsProtectionActive] = useState(true)
+  const [cleanupClipboard, setCleanupClipboard] = useState<(() => void) | null>(null)
   const [showPopup, setShowPopup] = useState(false)
   const [scanResult, setScanResult] = useState<any>(null)
   const [showQrScanner, setShowQrScanner] = useState(false)
@@ -32,6 +33,7 @@ export default function Home() {
 
     // Listen for clipboard URL detection
     const handleClipboardUrlDetected = (event: CustomEvent) => {
+      console.log('Clipboard URL detected event:', event.detail.url)
       setUrl(event.detail.url)
     }
 
@@ -44,12 +46,35 @@ export default function Home() {
     }
   }, [])
 
+  // Auto-start clipboard monitoring when component mounts
+  useEffect(() => {
+    const initClipboardMonitoring = async () => {
+      if (isProtectionActive) {
+        const cleanup = await startBackgroundProtection()
+        setCleanupClipboard(() => cleanup)
+      }
+    }
+    
+    initClipboardMonitoring()
+    
+    return () => {
+      if (cleanupClipboard) {
+        cleanupClipboard()
+      }
+    }
+  }, [isProtectionActive, startBackgroundProtection])
+
   const handleToggleProtection = async () => {
     if (isProtectionActive) {
+      if (cleanupClipboard) {
+        cleanupClipboard()
+        setCleanupClipboard(null)
+      }
       await stopBackgroundProtection()
       setIsProtectionActive(false)
     } else {
-      await startBackgroundProtection()
+      const cleanup = await startBackgroundProtection()
+      setCleanupClipboard(() => cleanup)
       setIsProtectionActive(true)
     }
   }

@@ -79,34 +79,41 @@ export function useBackgroundService() {
   const monitorClipboard = useCallback(async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.readText) {
-        const clipboardText = await navigator.clipboard.readText()
+        // Request clipboard permission if needed
+        const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' as PermissionName })
         
-        // Check if clipboard contains URL
-        if (isValidUrl(clipboardText)) {
-          const savedUrls = JSON.parse(localStorage.getItem('iurl-monitored-urls') || '[]')
-          const isNewUrl = !savedUrls.includes(clipboardText)
+        if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
+          const clipboardText = await navigator.clipboard.readText()
           
-          if (isNewUrl) {
-            // Auto-paste URL to input field
-            window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
-              detail: { url: clipboardText }
-            }))
+          // Check if clipboard contains URL
+          if (clipboardText && isValidUrl(clipboardText.trim())) {
+            const savedUrls = JSON.parse(localStorage.getItem('iurl-monitored-urls') || '[]')
+            const isNewUrl = !savedUrls.includes(clipboardText.trim())
             
-            // Save URL for monitoring
-            savedUrls.push(clipboardText)
-            localStorage.setItem('iurl-monitored-urls', JSON.stringify(savedUrls))
-            
-            // Show toast notification
-            toast({
-              title: "URL Detected",
-              description: "Clipboard URL automatically pasted for scanning"
-            })
+            if (isNewUrl) {
+              console.log('URL detected in clipboard:', clipboardText.trim())
+              
+              // Auto-paste URL to input field
+              window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
+                detail: { url: clipboardText.trim() }
+              }))
+              
+              // Save URL for monitoring
+              savedUrls.push(clipboardText.trim())
+              localStorage.setItem('iurl-monitored-urls', JSON.stringify(savedUrls))
+              
+              // Show toast notification
+              toast({
+                title: "URL Detected",
+                description: "Clipboard URL automatically pasted for scanning"
+              })
+            }
           }
         }
       }
     } catch (error) {
       // Clipboard access might be restricted, fail silently
-      console.log('Clipboard monitoring not available')
+      console.log('Clipboard monitoring not available:', error)
     }
   }, [toast])
 
