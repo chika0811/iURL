@@ -75,7 +75,7 @@ export function useBackgroundService() {
     }
   }
 
-  // Monitor clipboard for URLs (when app is active)
+  // Monitor clipboard for URLs with real-time detection
   const monitorClipboard = useCallback(async () => {
     try {
       if (navigator.clipboard && navigator.clipboard.readText) {
@@ -87,27 +87,20 @@ export function useBackgroundService() {
           const isNewUrl = !savedUrls.includes(clipboardText)
           
           if (isNewUrl) {
-            // Notify about new URL in clipboard
-            if (window.Capacitor?.isNativePlatform()) {
-              await LocalNotifications.schedule({
-                notifications: [
-                  {
-                    title: "URL Detected",
-                    body: "Tap to scan clipboard URL for safety",
-                    id: Date.now(),
-                    extra: { url: clipboardText },
-                    actionTypeId: "SCAN_URL",
-                    attachments: undefined,
-                    schedule: undefined,
-                    sound: undefined
-                  }
-                ]
-              })
-            }
+            // Auto-paste URL to input field
+            window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
+              detail: { url: clipboardText }
+            }))
             
             // Save URL for monitoring
             savedUrls.push(clipboardText)
             localStorage.setItem('iurl-monitored-urls', JSON.stringify(savedUrls))
+            
+            // Show toast notification
+            toast({
+              title: "URL Detected",
+              description: "Clipboard URL automatically pasted for scanning"
+            })
           }
         }
       }
@@ -115,7 +108,55 @@ export function useBackgroundService() {
       // Clipboard access might be restricted, fail silently
       console.log('Clipboard monitoring not available')
     }
-  }, [])
+  }, [toast])
+
+  // Set up real-time clipboard monitoring using focus/paste events
+  const setupClipboardListener = useCallback(() => {
+    let clipboardCheckInterval: NodeJS.Timeout
+
+    const startMonitoring = () => {
+      // Check clipboard every 1 second when app is focused
+      clipboardCheckInterval = setInterval(monitorClipboard, 1000)
+    }
+
+    const stopMonitoring = () => {
+      if (clipboardCheckInterval) {
+        clearInterval(clipboardCheckInterval)
+      }
+    }
+
+    // Monitor when window gains focus
+    const handleFocus = () => {
+      startMonitoring()
+      // Check immediately on focus
+      setTimeout(monitorClipboard, 100)
+    }
+
+    const handleBlur = () => {
+      stopMonitoring()
+    }
+
+    // Listen for paste events
+    const handlePaste = () => {
+      setTimeout(monitorClipboard, 100)
+    }
+
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('blur', handleBlur)
+    document.addEventListener('paste', handlePaste)
+
+    // Start monitoring if window is already focused
+    if (document.hasFocus()) {
+      startMonitoring()
+    }
+
+    return () => {
+      stopMonitoring()
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('blur', handleBlur)
+      document.removeEventListener('paste', handlePaste)
+    }
+  }, [monitorClipboard])
 
   // Utility function to validate URLs
   const isValidUrl = (text: string): boolean => {
@@ -131,13 +172,11 @@ export function useBackgroundService() {
   const startBackgroundProtection = useCallback(async () => {
     await initializeBackgroundService()
     
-    // Set up periodic clipboard monitoring (every 30 seconds when app is active)
-    const clipboardInterval = setInterval(monitorClipboard, 30000)
+    // Set up real-time clipboard monitoring
+    const cleanup = setupClipboardListener()
     
-    return () => {
-      clearInterval(clipboardInterval)
-    }
-  }, [initializeBackgroundService, monitorClipboard])
+    return cleanup
+  }, [initializeBackgroundService, setupClipboardListener])
 
   // Stop background protection
   const stopBackgroundProtection = useCallback(async () => {

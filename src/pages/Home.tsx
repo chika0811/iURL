@@ -30,10 +30,17 @@ export default function Home() {
       handleScanUrl()
     }
 
+    // Listen for clipboard URL detection
+    const handleClipboardUrlDetected = (event: CustomEvent) => {
+      setUrl(event.detail.url)
+    }
+
     window.addEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
+    window.addEventListener('clipboardUrlDetected', handleClipboardUrlDetected as EventListener)
     
     return () => {
       window.removeEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
+      window.removeEventListener('clipboardUrlDetected', handleClipboardUrlDetected as EventListener)
     }
   }, [])
 
