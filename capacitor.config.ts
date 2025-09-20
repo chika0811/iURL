@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.193b71eb3ad64c31be3bdf652c7cc0c8',
-  appName: 'iurl',
+  appId: 'com.dnovit.iurl',
+  appName: 'iURL',
   webDir: 'dist',
   server: {
     url: 'https://193b71eb-3ad6-4c31-be3b-df652c7cc0c8.lovableproject.com?forceHideBadge=true',
