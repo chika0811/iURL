@@ -1,0 +1,24 @@
+{
+  "android": {
+    "buildOptions": {
+      "keystorePath": "android/app/keystore.jks",
+      "keystorePassword": "$KEYSTORE_PASSWORD",
+      "keyAlias": "iurl",
+      "keyPassword": "$KEY_PASSWORD",
+      "buildType": "release"
+    },
+    "gradle": {
+      "minSdkVersion": 24,
+      "compileSdkVersion": 35,
+      "targetSdkVersion": 35,
+      "buildToolsVersion": "35.0.0"
+    }
+  },
+  "ios": {
+    "buildOptions": {
+      "bundleId": "com.dnovit.iurl",
+      "provisioningProfile": "iURL Production",
+      "codeSignIdentity": "iPhone Distribution"
+    }
+  }
+}
