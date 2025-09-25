@@ -5,7 +5,8 @@ const config: CapacitorConfig = {
   appName: 'iURL',
   webDir: 'dist',
   server: {
-    url: 'https://193b71eb-3ad6-4c31-be3b-df652c7cc0c8.lovableproject.com?forceHideBadge=true',
+    // Remove this server config for production APK builds
+    // url: 'https://193b71eb-3ad6-4c31-be3b-df652c7cc0c8.lovableproject.com?forceHideBadge=true',
     cleartext: true
   },
   plugins: {

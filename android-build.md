@@ -4,6 +4,7 @@
 - Node.js 18+ installed
 - Android Studio with SDK tools
 - Java JDK 17 or later
+- Gradle 8.10.2 (latest version)
 
 ## Quick Setup Commands
 
@@ -40,9 +41,22 @@
 ## Troubleshooting Common Issues
 
 ### Gradle Issues
-- Ensure Java JDK 17+ is installed
-- Clear Gradle cache: `./gradlew clean`
-- Invalidate caches in Android Studio
+- Ensure Java JDK 17+ is installed and properly configured
+- Clear Gradle cache: `./gradlew clean` or manually delete `~/.gradle/caches`
+- Invalidate caches in Android Studio: File → Invalidate Caches and Restart
+- Verify Gradle wrapper version is 8.10.2 in `gradle/wrapper/gradle-wrapper.properties`
+- Check Android Gradle Plugin version compatibility (should be 8.7.2 or compatible)
+- Ensure JAVA_HOME environment variable points to JDK 17+
+
+### Memory Issues
+- If builds fail with OutOfMemoryError, increase heap size in `gradle.properties`
+- Current settings allocate 4GB RAM and 1GB MetaSpace
+- For slower machines, reduce to: `org.gradle.jvmargs=-Xmx2048m -XX:MaxMetaspaceSize=512m`
+
+### Version Compatibility Issues
+- Android Gradle Plugin 8.7.2 requires Gradle 8.9+
+- Target SDK 35 requires Android Studio Ladybug or newer
+- Build Tools 35.0.0 requires Android SDK Platform-Tools 35.0.0+
 
 ### Build Failures
 - Check `gradle.properties` configuration
@@ -62,3 +76,11 @@ The app includes these permissions:
 - **App Name**: iURL
 - **Min SDK**: 24 (Android 7.0)
 - **Target SDK**: 35 (Android 15)
+- **Gradle Version**: 8.10.2 (latest)
+- **Android Gradle Plugin**: 8.7.2
+
+## Additional Notes
+- All configuration files have been optimized for the latest build tools
+- Gradle performance settings are tuned for faster builds
+- Configuration cache is enabled for improved build speeds
+- Memory allocation is optimized for modern development machines
