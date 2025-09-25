@@ -43,8 +43,8 @@ export function useUrlScanner() {
         if (legitDomains.some(domain => url.includes(domain))) return true
       }
       
-      // Long random character strings
-      if (/[a-z0-9]{20,}/.test(url)) return true
+      // Long random character strings - only flag if truly random (no meaningful patterns)
+      if (/[a-z0-9]{30,}/.test(url) && !/\w+\.(com|org|net|edu|gov|mil)/.test(url)) return true
       
       // Fake login patterns
       const loginPatterns = ['login', 'signin', 'auth', 'verify', 'secure', 'account', 'update', 'confirm', 'validation']
@@ -55,13 +55,14 @@ export function useUrlScanner() {
     }
     
     const detectMalware = (url: string): boolean => {
-      // File download patterns
-      const malwareExtensions = ['.exe', '.scr', '.bat', '.com', '.pif', '.vbs', '.js', '.jar', '.apk', '.dmg', '.pkg']
-      if (malwareExtensions.some(ext => url.includes(ext))) return true
+      // File download patterns - only suspicious executables
+      const malwareExtensions = ['.exe', '.scr', '.bat', '.pif', '.vbs']
+      if (malwareExtensions.some(ext => url.endsWith(ext))) return true
       
-      // Shortened URL services (potential malware redirects)
+      // Only flag shortened URLs if they contain obvious malware indicators
       const shorteners = ['bit.ly', 'tinyurl', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'buff.ly', 'short.link', 'tiny.cc']
-      if (shorteners.some(shortener => url.includes(shortener))) return true
+      const hasShortenedUrl = shorteners.some(shortener => url.includes(shortener))
+      if (hasShortenedUrl && (url.includes('malware') || url.includes('virus') || url.includes('trojan'))) return true
       
       // Force download patterns
       if (url.includes('download') && (url.includes('force') || url.includes('auto') || url.includes('direct'))) return true
@@ -127,8 +128,8 @@ export function useUrlScanner() {
         const sensitiveParams = ['password', 'pwd', 'pass', 'token', 'auth', 'key', 'secret', 'session', 'cookie']
         if (sensitiveParams.some(param => Array.from(params.keys()).join('').toLowerCase().includes(param))) return true
         
-        // Too many parameters (potential data harvesting)
-        if (params.size > 10) return true
+        // Too many parameters (potential data harvesting) - increased threshold
+        if (params.size > 20) return true
         
       } catch (e) {
         return false
@@ -142,22 +143,22 @@ export function useUrlScanner() {
         const urlObj = new URL(url)
         const hostname = urlObj.hostname.toLowerCase()
         
-        // IP address instead of domain name
-        if (/^\d+\.\d+\.\d+\.\d+$/.test(hostname)) return true
+        // IP address instead of domain name - only flag private IPs or suspicious patterns
+        if (/^(192\.168\.|10\.|172\.(1[6-9]|2[0-9]|3[01])\.|127\.)/.test(hostname)) return true
         
         // Excessive subdomains
         const subdomains = hostname.split('.')
         if (subdomains.length > 4) return true
         
-        // Random character domains
-        if (/^[a-z0-9]{8,}\./.test(hostname)) return true
+        // Random character domains - only flag if truly random and suspicious
+        if (/^[a-z0-9]{15,}\./.test(hostname) && !hostname.includes('amazonaws') && !hostname.includes('cloudfront')) return true
         
         // Non-HTTPS for sensitive operations
         if (urlObj.protocol === 'http:' && 
             (url.includes('login') || url.includes('payment') || url.includes('bank'))) return true
         
-        // Suspicious TLDs for brand impersonation
-        const suspiciousTLDs = ['.tk', '.ml', '.ga', '.cf', '.xyz', '.top', '.click', '.download', '.review', '.stream', '.science', '.faith', '.win', '.bid', '.loan', '.ru', '.su']
+        // Suspicious TLDs for brand impersonation - only truly suspicious ones
+        const suspiciousTLDs = ['.tk', '.ml', '.ga', '.cf']
         if (suspiciousTLDs.some(tld => hostname.endsWith(tld))) return true
         
         return false
