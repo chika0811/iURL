@@ -1,23 +1,20 @@
 import { useState, useCallback } from "react"
 import { useToast } from "@/hooks/use-toast"
+import { useDeepSeekScanner } from "@/hooks/use-deepseek-scanner"
 
 export interface ScanResult {
   url: string
   safe: boolean
   timestamp: number
+  aiAnalysis?: {
+    confidence: number
+    threats: string[]
+    reasoning: string
+  }
 }
 
-export function useUrlScanner() {
-  const [isScanning, setIsScanning] = useState(false)
-  const { toast } = useToast()
-
-  const scanUrl = useCallback(async (url: string): Promise<ScanResult> => {
-    setIsScanning(true)
-    
-    // Simulate URL scanning with delay
-    await new Promise(resolve => setTimeout(resolve, 2000))
-    
-    const detectPhishing = (url: string): boolean => {
+// Helper function for phishing detection
+const detectPhishing = (url: string): boolean => {
       // Typosquatting patterns
       const legitDomains = ['facebook', 'google', 'paypal', 'amazon', 'microsoft', 'apple', 'netflix', 'instagram', 'twitter', 'linkedin', 'gmail', 'yahoo', 'outlook']
       const typoPatterns = [
@@ -54,7 +51,8 @@ export function useUrlScanner() {
       return false
     }
     
-    const detectMalware = (url: string): boolean => {
+// Helper function for malware detection
+const detectMalware = (url: string): boolean => {
       // File download patterns - only suspicious executables
       const malwareExtensions = ['.exe', '.scr', '.bat', '.pif', '.vbs']
       if (malwareExtensions.some(ext => url.endsWith(ext))) return true
@@ -74,7 +72,8 @@ export function useUrlScanner() {
       return false
     }
     
-    const detectScam = (url: string): boolean => {
+// Helper function for scam detection
+const detectScam = (url: string): boolean => {
       // Too good to be true patterns
       const scamKeywords = [
         'you-won', 'winner', 'congratulations', 'prize', 'lottery', 'million-dollar',
@@ -101,7 +100,8 @@ export function useUrlScanner() {
       return false
     }
     
-    const detectNSFW = (url: string): boolean => {
+// Helper function for NSFW detection
+const detectNSFW = (url: string): boolean => {
       const nsfwKeywords = [
         'porn', 'xxx', 'adult', 'sex', 'nude', 'naked', 'erotic', 'cam', 'escort',
         'casino', 'gambling', 'poker', 'slots', 'betting', 'lottery',
@@ -112,7 +112,8 @@ export function useUrlScanner() {
       return nsfwKeywords.some(keyword => url.includes(keyword))
     }
     
-    const detectSuspiciousParams = (url: string): boolean => {
+// Helper function for suspicious parameters detection
+const detectSuspiciousParams = (url: string): boolean => {
       try {
         const urlObj = new URL(url)
         const params = urlObj.searchParams
@@ -138,7 +139,8 @@ export function useUrlScanner() {
       return false
     }
     
-    const detectSuspiciousDomain = (url: string): boolean => {
+// Helper function for suspicious domain detection
+const detectSuspiciousDomain = (url: string): boolean => {
       try {
         const urlObj = new URL(url)
         const hostname = urlObj.hostname.toLowerCase()
@@ -166,8 +168,9 @@ export function useUrlScanner() {
         return true // Invalid URL
       }
     }
-    
-    const detectThreats = (url: string): boolean => {
+
+// Main threat detection function
+const detectThreats = (url: string): boolean => {
       const urlLower = url.toLowerCase()
       
       // 1. Phishing Detection
@@ -190,14 +193,43 @@ export function useUrlScanner() {
       
       return false
     }
+
+export function useUrlScanner() {
+  const [isScanning, setIsScanning] = useState(false)
+  const { toast } = useToast()
+  const { analyzeUrl, hasApiKey } = useDeepSeekScanner()
+
+  const scanUrl = useCallback(async (url: string): Promise<ScanResult> => {
+    setIsScanning(true)
     
-    // Comprehensive threat detection
-    const isSafe = !detectThreats(url)
+    let aiAnalysis
+    let isSafe = true
+    
+    // Try AI analysis first if API key is available
+    if (hasApiKey) {
+      try {
+        const analysis = await analyzeUrl(url)
+        aiAnalysis = {
+          confidence: analysis.confidence,
+          threats: analysis.threats,
+          reasoning: analysis.reasoning
+        }
+        isSafe = analysis.isSafe
+      } catch (error) {
+        console.error('AI analysis failed, falling back to rule-based detection:', error)
+        // Fall back to rule-based detection if AI fails
+        isSafe = !detectThreats(url)
+      }
+    } else {
+      // Use rule-based detection if no API key
+      isSafe = !detectThreats(url)
+    }
     
     const result: ScanResult = {
       url,
       safe: isSafe,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      aiAnalysis
     }
     
     // Update daily stats
@@ -235,17 +267,23 @@ export function useUrlScanner() {
       }
     
     // Show toast notification
+    const description = isSafe 
+      ? aiAnalysis 
+        ? `AI Analysis (${aiAnalysis.confidence}% confidence): ${aiAnalysis.reasoning}`
+        : "This link is legitimate and safe to open."
+      : aiAnalysis
+        ? `Threats detected: ${aiAnalysis.threats.join(', ')}. ${aiAnalysis.reasoning}`
+        : "This link appears to be malicious and has been blocked."
+    
     toast({
-      title: isSafe ? "Link is Safe" : "Threat Detected!",
-      description: isSafe 
-        ? "This link is legitimate and safe to open."
-        : "This link appears to be malicious and has been blocked.",
+      title: isSafe ? "Link is Safe ✓" : "Threat Detected!",
+      description,
       variant: isSafe ? "default" : "destructive",
     })
     
     setIsScanning(false)
     return result
-  }, [toast])
+  }, [toast, analyzeUrl, hasApiKey])
 
   return {
     scanUrl,

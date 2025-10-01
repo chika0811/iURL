@@ -9,6 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LinkStatusPopup } from "@/components/ui/link-status-popup"
 import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
 import { QrScanner } from "@/components/qr-scanner"
+import { DeepSeekApiSettings } from "@/components/deepseek-api-settings"
 import { useUrlScanner } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 import { useBackgroundService } from "@/hooks/use-background-service"
@@ -176,6 +177,9 @@ export default function Home() {
           </CardContent>
         </Card>
 
+        {/* DeepSeek AI Settings */}
+        <DeepSeekApiSettings />
+
         {/* URL Security Scanner */}
         <Card>
           <CardHeader>
@@ -219,6 +223,16 @@ export default function Home() {
           />
         )}
       </div>
+
+      {showPopup && (
+        <LinkStatusPopup
+          isVisible={showPopup}
+          isLoading={isScanning}
+          result={scanResult}
+          onClose={handleClosePopup}
+          onOpenLink={handleOpenLink}
+        />
+      )}
 
       {showQrScanner && (
         <QrScanner
