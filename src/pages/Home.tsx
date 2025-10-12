@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react"
-import { QrCode, Shield, TrendingUp, ShieldX } from "lucide-react"
+import { QrCode, Shield, TrendingUp, ShieldX, Settings } from "lucide-react"
 import { AppHeader } from "@/components/layout/app-header"
 import { BottomNavigation } from "@/components/layout/bottom-navigation"
 import { Button } from "@/components/ui/button"
@@ -9,20 +9,25 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { LinkStatusPopup } from "@/components/ui/link-status-popup"
 import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
 import { QrScanner } from "@/components/qr-scanner"
-import { useUrlScanner } from "@/hooks/use-url-scanner"
+import { AllowlistManager } from "@/components/allowlist-manager"
+import { useUrlScanner, ScanResult } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 import { useBackgroundService } from "@/hooks/use-background-service"
+import { addToAllowlist } from "@/lib/url-scanner/allowlist"
+import { useToast } from "@/hooks/use-toast"
 
 export default function Home() {
   const [url, setUrl] = useState("")
   const [isProtectionActive, setIsProtectionActive] = useState(true)
   const [cleanupClipboard, setCleanupClipboard] = useState<(() => void) | null>(null)
   const [showPopup, setShowPopup] = useState(false)
-  const [scanResult, setScanResult] = useState<any>(null)
+  const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [showQrScanner, setShowQrScanner] = useState(false)
+  const [showAllowlist, setShowAllowlist] = useState(false)
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
   const { startBackgroundProtection, stopBackgroundProtection } = useBackgroundService()
+  const { toast } = useToast()
 
   useEffect(() => {
     // Listen for URL scan requests from notifications
@@ -126,6 +131,28 @@ export default function Home() {
     setShowQrScanner(false)
   }
 
+  const handleAddToAllowlist = () => {
+    if (scanResult?.url) {
+      try {
+        const domain = new URL(scanResult.url).hostname
+        addToAllowlist(domain)
+        toast({
+          title: "Domain trusted",
+          description: `${domain} added to allowlist`,
+        })
+        setShowPopup(false)
+        setScanResult(null)
+        setUrl("")
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to add domain to allowlist",
+          variant: "destructive"
+        })
+      }
+    }
+  }
+
   return (
     <div className="min-h-screen bg-background pb-20">
       <AppHeader />
@@ -139,13 +166,22 @@ export default function Home() {
                 <Shield className="h-6 w-6 text-primary" />
                 <h2 className="text-lg font-semibold">Real-time Protection</h2>
               </div>
-              <Button
-                variant={isProtectionActive ? "default" : "outline"}
-                onClick={handleToggleProtection}
-                className="px-6"
-              >
-                {isProtectionActive ? "Active" : "Activate"}
-              </Button>
+              <div className="flex space-x-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowAllowlist(true)}
+                >
+                  <Settings className="h-5 w-5" />
+                </Button>
+                <Button
+                  variant={isProtectionActive ? "default" : "outline"}
+                  onClick={handleToggleProtection}
+                  className="px-6"
+                >
+                  {isProtectionActive ? "Active" : "Activate"}
+                </Button>
+              </div>
             </div>
             
             <div className="grid grid-cols-2 gap-4 mb-4">
@@ -220,12 +256,26 @@ export default function Home() {
         )}
       </div>
 
+      <LinkStatusPopup
+        isOpen={showPopup}
+        result={scanResult}
+        isScanning={isScanning}
+        onOpenLink={handleOpenLink}
+        onClose={handleClosePopup}
+        onAddToAllowlist={handleAddToAllowlist}
+      />
+
       {showQrScanner && (
         <QrScanner
           onResult={handleQrResult}
           onClose={handleCloseQrScanner}
         />
       )}
+
+      <AllowlistManager
+        open={showAllowlist}
+        onClose={() => setShowAllowlist(false)}
+      />
 
       <BottomNavigation />
     </div>

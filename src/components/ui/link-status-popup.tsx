@@ -1,82 +1,149 @@
-import { CheckCircle, AlertTriangle, ExternalLink } from "lucide-react"
-import { Card, CardContent } from "@/components/ui/card"
+import { CheckCircle, XCircle, AlertTriangle, Shield } from "lucide-react"
 import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Card } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { ScanResult } from "@/hooks/use-url-scanner"
 
 interface LinkStatusPopupProps {
-  isVisible: boolean
-  isLoading: boolean
-  result?: {
-    safe: boolean
-    url: string
-  }
+  isOpen: boolean
+  result: ScanResult | null
+  isScanning: boolean
+  onOpenLink: () => void
   onClose: () => void
-  onOpenLink?: () => void
+  onAddToAllowlist?: () => void
 }
 
-export function LinkStatusPopup({ 
-  isVisible, 
-  isLoading, 
-  result, 
-  onClose, 
-  onOpenLink 
+export function LinkStatusPopup({
+  isOpen,
+  result,
+  isScanning,
+  onOpenLink,
+  onClose,
+  onAddToAllowlist,
 }: LinkStatusPopupProps) {
-  if (!isVisible) return null
+  if (!isOpen) return null
+
+  const getIcon = () => {
+    if (isScanning) {
+      return <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-primary" />
+    }
+    
+    if (!result) return null
+
+    if (result.verdict === 'clean') {
+      return <CheckCircle className="h-16 w-16 text-green-500" />
+    } else if (result.verdict === 'suspicious') {
+      return <AlertTriangle className="h-16 w-16 text-yellow-500" />
+    } else {
+      return <XCircle className="h-16 w-16 text-red-500" />
+    }
+  }
+
+  const getTitle = () => {
+    if (isScanning) return 'Scanning...'
+    if (!result) return 'Processing...'
+    
+    if (result.verdict === 'clean') return 'Link is Safe ✓'
+    if (result.verdict === 'suspicious') return 'Suspicious Link ⚠️'
+    return 'Threat Detected! 🛡️'
+  }
+
+  const getDescription = () => {
+    if (isScanning) return 'Analyzing URL for threats...'
+    if (!result) return 'Processing result...'
+    
+    if (result.verdict === 'clean') {
+      return 'This link is legitimate and safe to open.'
+    } else if (result.verdict === 'suspicious') {
+      return 'This link shows warning signs. Review carefully before opening.'
+    } else {
+      return 'This link appears malicious and has been blocked for your protection.'
+    }
+  }
+
+  const borderColor = !result || result.verdict === 'clean' 
+    ? 'border-green-500' 
+    : result.verdict === 'suspicious'
+    ? 'border-yellow-500'
+    : 'border-red-500'
 
   return (
-    <div className="fixed inset-x-4 top-60 z-50 mx-auto max-w-lg">
-      <Card className={cn(
-        "shadow-lg border-2 transition-all duration-300",
-        result?.safe ? "border-green-500 bg-green-50 dark:bg-green-950" : "border-red-500 bg-red-50 dark:bg-red-950",
-        isLoading && "border-blue-500 bg-blue-50 dark:bg-blue-950"
-      )}>
-        <CardContent className="p-4">
-          <div className="flex items-start space-x-3">
-            {isLoading ? (
-              <div className="animate-spin rounded-full h-6 w-6 border-2 border-primary border-t-transparent" />
-            ) : result?.safe ? (
-              <CheckCircle className="h-6 w-6 text-green-600 flex-shrink-0" />
-            ) : (
-              <AlertTriangle className="h-6 w-6 text-red-600 flex-shrink-0" />
-            )}
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="font-semibold text-lg">
-                {isLoading ? "Checking Link..." : result?.safe ? "Safe Link Verified" : "Threat Detected!"}
-              </h3>
-              <p className="text-sm text-muted-foreground mt-1">
-                {isLoading 
-                  ? "Analyzing URL for potential threats..."
-                  : result?.safe 
-                    ? "Link is safe to open. Click 'Open Link' to visit."
-                    : "This link appears to be malicious and has been blocked."
-                }
-              </p>
-              
-              {result && (
-                <div className="flex gap-2 mt-3">
-                  {result.safe && onOpenLink && (
-                    <Button 
-                      size="sm" 
-                      className="bg-green-600 hover:bg-green-700"
-                      onClick={onOpenLink}
-                    >
-                      <ExternalLink className="h-4 w-4 mr-2" />
-                      Open Link
-                    </Button>
-                  )}
-                  <Button 
-                    variant="outline" 
-                    size="sm" 
-                    onClick={onClose}
-                  >
+    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+      <Card className={`w-full max-w-md p-6 space-y-4 ${borderColor} border-2`}>
+        <div className="flex items-center justify-center">
+          {getIcon()}
+        </div>
+
+        <div className="text-center space-y-2">
+          <h2 className="text-2xl font-bold">{getTitle()}</h2>
+          
+          {result && (
+            <div className="flex items-center justify-center space-x-2">
+              <Badge variant={result.verdict === 'clean' ? 'secondary' : 'destructive'}>
+                Score: {result.score}/100
+              </Badge>
+              <Badge variant="outline">{result.verdict}</Badge>
+            </div>
+          )}
+
+          <p className="text-muted-foreground break-all text-sm font-mono">
+            {result?.url}
+          </p>
+          
+          <p className="text-sm">{getDescription()}</p>
+
+          {result && result.reasons.length > 0 && (
+            <div className="bg-muted p-3 rounded-lg text-left">
+              <p className="font-semibold text-xs mb-2">Detection Details:</p>
+              <ul className="space-y-1">
+                {result.reasons.map((reason, idx) => (
+                  <li key={idx} className="text-xs flex items-start space-x-2">
+                    <Shield className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                    <span>{reason}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+
+        {!isScanning && result && (
+          <div className="space-y-2">
+            <div className="flex space-x-3">
+              {result.verdict === 'clean' ? (
+                <>
+                  <Button onClick={onOpenLink} className="flex-1">
+                    Open Link
+                  </Button>
+                  <Button onClick={onClose} variant="outline" className="flex-1">
                     Close
                   </Button>
-                </div>
+                </>
+              ) : (
+                <>
+                  <Button onClick={onClose} className="flex-1">
+                    Close
+                  </Button>
+                  <Button onClick={onOpenLink} variant="outline" className="flex-1">
+                    Open Anyway
+                  </Button>
+                </>
               )}
             </div>
+            
+            {result.verdict !== 'clean' && onAddToAllowlist && (
+              <Button 
+                onClick={onAddToAllowlist} 
+                variant="ghost" 
+                size="sm" 
+                className="w-full"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Trust this domain
+              </Button>
+            )}
           </div>
-        </CardContent>
+        )}
       </Card>
     </div>
   )
