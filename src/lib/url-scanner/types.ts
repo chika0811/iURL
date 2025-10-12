@@ -1,7 +1,7 @@
 export interface ScanResult {
   url: string
   safe: boolean
-  score: number // 0-100, higher = more dangerous
+  score: number // 0-100, higher = safer
   verdict: 'clean' | 'suspicious' | 'malicious'
   timestamp: number
   reasons: string[]
@@ -26,7 +26,7 @@ export interface AllowlistEntry {
 }
 
 export const THRESHOLDS = {
-  CLEAN: 20,
+  CLEAN: 10, // Danger score below this is considered safe
   MALICIOUS: 60
 } as const
 

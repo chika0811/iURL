@@ -11,17 +11,17 @@ import {
 } from './detectors'
 
 export function calculateScore(url: string): ScanResult {
-  // Step 1: Check allowlist first
+  // Step 1: Check allowlist first for immediate safety confirmation
   if (isInAllowlist(url)) {
     return {
       url,
       safe: true,
-      score: 0,
+      score: 100, // A 100% safe score for allowlisted domains
       verdict: 'clean',
       timestamp: Date.now(),
-      reasons: ['Domain is in allowlist'],
+      reasons: ['This domain is on your trusted list.'],
       factors: {
-        allowlist: 0,
+        allowlist: 1, // Indicate allowlist was hit
         threatFeed: 0,
         domainSimilarity: 0,
         certificate: 0,
@@ -33,7 +33,7 @@ export function calculateScore(url: string): ScanResult {
     }
   }
 
-  // Step 2: Run all detectors
+  // Step 2: Run all detectors to gather risk factors
   const factors: ScanFactors = {
     allowlist: 0,
     threatFeed: detectThreatFeed(url),
@@ -45,7 +45,7 @@ export function calculateScore(url: string): ScanResult {
     c2: detectC2Links(url)
   }
 
-  // Step 3: Calculate weighted score
+  // Step 3: Calculate a weighted "danger score"
   const contributions = {
     threatFeed: WEIGHTS.threatFeed * (factors.threatFeed / 100),
     domainSimilarity: WEIGHTS.domainSimilarity * (factors.domainSimilarity / 100),
@@ -59,25 +59,28 @@ export function calculateScore(url: string): ScanResult {
   const totalContribution = Object.values(contributions).reduce((sum, val) => sum + val, 0)
   const totalWeight = Object.values(WEIGHTS).reduce((sum, val) => sum + val, 0) - WEIGHTS.allowlist
 
-  const score = (totalContribution / totalWeight) * 100
+  const dangerScore = Math.min(100, (totalContribution / totalWeight) * 100)
 
-  // Step 4: Determine verdict
+  // Step 4: Invert the danger score to get a "safety score"
+  const safetyScore = 100 - dangerScore
+
+  // Step 5: Determine the verdict based on the danger score
   let verdict: 'clean' | 'suspicious' | 'malicious'
-  if (score <= THRESHOLDS.CLEAN) {
+  if (dangerScore <= THRESHOLDS.CLEAN) {
     verdict = 'clean'
-  } else if (score < THRESHOLDS.MALICIOUS) {
+  } else if (dangerScore < THRESHOLDS.MALICIOUS) {
     verdict = 'suspicious'
   } else {
     verdict = 'malicious'
   }
 
-  // Step 5: Generate human-readable reasons
-  const reasons = generateReasons(factors, contributions)
+  // Step 6: Generate human-readable reasons for the score
+  const reasons = generateReasons(factors, contributions, verdict)
 
   return {
     url,
     safe: verdict === 'clean',
-    score: Math.round(score),
+    score: Math.round(safetyScore),
     verdict,
     timestamp: Date.now(),
     reasons,
@@ -85,8 +88,17 @@ export function calculateScore(url: string): ScanResult {
   }
 }
 
-function generateReasons(factors: ScanFactors, contributions: Record<string, number>): string[] {
+function generateReasons(
+  factors: ScanFactors,
+  contributions: Record<string, number>,
+  verdict: 'clean' | 'suspicious' | 'malicious'
+): string[] {
   const reasons: string[] = []
+
+  if (verdict === 'clean') {
+    reasons.push('This link appears to be safe.')
+    return reasons
+  }
 
   if (contributions.threatFeed > 5) {
     if (factors.threatFeed >= 80) {
