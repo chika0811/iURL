@@ -46,6 +46,11 @@ export function detectDomainSimilarity(url: string): number {
 
     let minDistance = Infinity
     for (const legitDomain of legitDomains) {
+      // Optimization: if length difference is too big, it's unlikely to be a match
+      if (Math.abs(domain.length - legitDomain.length) > 4) {
+        continue
+      }
+
       const distance = levenshteinDistance(domain, legitDomain)
 
       // If the domain is a substring of a legit domain, it could be something like 'login-apple'
@@ -164,17 +169,22 @@ export function detectCertificate(url: string): number {
 }
 
 export function detectRedirects(url: string): number {
-  // URL shorteners can be used to mask malicious destinations
-  const shorteners = [
-    'bit.ly', 'tinyurl', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'short.link', 'tiny.cc',
-    'rebrand.ly', 'buff.ly', 'shorte.st', 'adf.ly', 'bc.vc', 'cutt.ly', 'tiny.one'
-  ]
-  
-  if (shorteners.some(shortener => new URL(url).hostname.includes(shortener))) {
-    return 60 // Moderate suspicion - common but can hide threats
-  }
+  try {
+    // URL shorteners can be used to mask malicious destinations
+    const shorteners = [
+      'bit.ly', 'tinyurl', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'short.link', 'tiny.cc',
+      'rebrand.ly', 'buff.ly', 'shorte.st', 'adf.ly', 'bc.vc', 'cutt.ly', 'tiny.one'
+    ]
 
-  return 0
+    const hostname = new URL(url).hostname;
+    if (shorteners.some(shortener => hostname.includes(shortener))) {
+      return 60 // Moderate suspicion - common but can hide threats
+    }
+
+    return 0
+  } catch {
+    return 0
+  }
 }
 
 export function detectEntropy(url: string): number {
