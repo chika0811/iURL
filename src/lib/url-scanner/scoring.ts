@@ -6,7 +6,8 @@ import {
   detectCertificate,
   detectRedirects,
   detectEntropy,
-  detectBehavior
+  detectBehavior,
+  detectC2Links
 } from './detectors'
 
 export function calculateScore(url: string): ScanResult {
@@ -26,7 +27,8 @@ export function calculateScore(url: string): ScanResult {
         certificate: 0,
         redirects: 0,
         entropy: 0,
-        behavior: 0
+        behavior: 0,
+        c2: 0
       }
     }
   }
@@ -39,7 +41,8 @@ export function calculateScore(url: string): ScanResult {
     certificate: detectCertificate(url),
     redirects: detectRedirects(url),
     entropy: detectEntropy(url),
-    behavior: detectBehavior(url)
+    behavior: detectBehavior(url),
+    c2: detectC2Links(url)
   }
 
   // Step 3: Calculate weighted score
@@ -49,13 +52,12 @@ export function calculateScore(url: string): ScanResult {
     certificate: WEIGHTS.certificate * (factors.certificate / 100),
     redirects: WEIGHTS.redirects * (factors.redirects / 100),
     entropy: WEIGHTS.entropy * (factors.entropy / 100),
-    behavior: WEIGHTS.behavior * (factors.behavior / 100)
+    behavior: WEIGHTS.behavior * (factors.behavior / 100),
+    c2: WEIGHTS.c2 * (factors.c2 / 100)
   }
 
   const totalContribution = Object.values(contributions).reduce((sum, val) => sum + val, 0)
-  const totalWeight = WEIGHTS.threatFeed + WEIGHTS.domainSimilarity + 
-                     WEIGHTS.certificate + WEIGHTS.redirects + 
-                     WEIGHTS.entropy + WEIGHTS.behavior
+  const totalWeight = Object.values(WEIGHTS).reduce((sum, val) => sum + val, 0) - WEIGHTS.allowlist
 
   const score = (totalContribution / totalWeight) * 100
 
@@ -118,6 +120,10 @@ function generateReasons(factors: ScanFactors, contributions: Record<string, num
     } else {
       reasons.push('Questionable content indicators')
     }
+  }
+
+  if (contributions.c2 > 5) {
+    reasons.push('URL matches patterns of Command & Control (C2) servers')
   }
 
   if (reasons.length === 0) {
