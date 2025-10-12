@@ -31,7 +31,8 @@ export function detectDomainSimilarity(url: string): number {
   const legitDomains = [
     'facebook', 'google', 'paypal', 'amazon', 'microsoft', 'apple', 
     'netflix', 'instagram', 'twitter', 'linkedin', 'gmail', 'yahoo', 
-    'outlook', 'github', 'spotify', 'reddit'
+    'outlook', 'github', 'spotify', 'reddit', 'twitch', 'discord',
+    'roblox', 'ebay', 'walmart', 'target', 'chase', 'wellsfargo', 'bankofamerica'
   ]
 
   try {
@@ -61,8 +62,8 @@ export function detectThreatFeed(url: string): number {
   const urlLower = url.toLowerCase()
   
   // Suspicious TLDs commonly used for phishing
-  const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.xyz', '.top', '.click', '.download']
-  if (suspiciousTlds.some(tld => urlLower.includes(tld))) {
+  const suspiciousTlds = ['.tk', '.ml', '.ga', '.cf', '.xyz', '.top', '.click', '.download', '.ru', '.biz', '.info', '.loan', '.work']
+  if (suspiciousTlds.some(tld => urlLower.endsWith(tld))) {
     return 70
   }
 
@@ -73,7 +74,10 @@ export function detectThreatFeed(url: string): number {
   }
 
   // Phishing patterns
-  const phishingPatterns = ['verify-account', 'suspended-account', 'confirm-identity', 'urgent-action']
+  const phishingPatterns = [
+    'verify-account', 'suspended-account', 'confirm-identity', 'urgent-action',
+    'login-support', 'account-update', 'secure-login', 'login-required'
+  ]
   if (phishingPatterns.some(pattern => urlLower.includes(pattern))) {
     return 80
   }
@@ -96,15 +100,24 @@ export function detectCertificate(url: string): number {
       return 30
     }
 
+    // Mixed content (HTTPS page with HTTP resources) is a flag, though hard to detect from URL alone.
+    // This is a simplified check. A real implementation would need to inspect page content.
+    if (urlObj.protocol === 'https:' && url.includes('http://')) {
+      return 40
+    }
+
     return 0
   } catch {
-    return 50
+    return 50 // Invalid URL structure
   }
 }
 
 export function detectRedirects(url: string): number {
   // URL shortener detection
-  const shorteners = ['bit.ly', 'tinyurl', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'short.link', 'tiny.cc']
+  const shorteners = [
+    'bit.ly', 'tinyurl', 't.co', 'goo.gl', 'ow.ly', 'is.gd', 'short.link', 'tiny.cc',
+    'rebrand.ly', 'buff.ly', 'shorte.st', 'adf.ly', 'bc.vc'
+  ]
   
   if (shorteners.some(shortener => url.includes(shortener))) {
     return 60 // Moderate suspicion - common but can hide threats
@@ -117,21 +130,23 @@ export function detectEntropy(url: string): number {
   try {
     const urlObj = new URL(url)
     const path = urlObj.pathname + urlObj.search
+    const hostname = urlObj.hostname
     
-    // Long random strings
-    if (/[a-z0-9]{30,}/.test(path)) {
-      return 80
+    // Long random strings in path or hostname
+    if (/[a-z0-9]{30,}/.test(path) || /[a-z0-9-]{30,}/.test(hostname)) {
+      return 90
     }
 
-    // Calculate entropy of path
+    // Calculate entropy of the entire URL string
+    const fullUrl = url.replace(/^https?:\/\//, '')
     const chars: Record<string, number> = {}
-    for (const char of path) {
+    for (const char of fullUrl) {
       chars[char] = (chars[char] || 0) + 1
     }
 
     let entropy = 0
     for (const count of Object.values(chars)) {
-      const p = count / path.length
+      const p = count / fullUrl.length
       entropy -= p * Math.log2(p)
     }
 
@@ -162,14 +177,16 @@ export function detectBehavior(url: string): number {
   // Scam keywords
   const scamKeywords = [
     'winner', 'prize', 'lottery', 'free-iphone', 'free-money', 
-    'get-rich', 'urgent', 'expire-today', 'act-now'
+    'get-rich', 'urgent', 'expire-today', 'act-now', 'congratulations',
+    'claim-your', 'exclusive-deal', 'limited-time', 'investment', 'high-return',
+    'crypto-giveaway', 'free-trial', 'miracle-cure', 'unrealistic-discount'
   ]
   if (scamKeywords.some(keyword => urlLower.includes(keyword))) {
     return 85
   }
 
-  // NSFW/Gambling
-  const nsfwKeywords = ['porn', 'xxx', 'adult', 'casino', 'gambling', 'betting']
+  // NSFW/Gambling/Piracy
+  const nsfwKeywords = ['porn', 'xxx', 'adult', 'casino', 'gambling', 'betting', 'cracked', 'warez', 'pirated']
   if (nsfwKeywords.some(keyword => urlLower.includes(keyword))) {
     return 70
   }
@@ -177,14 +194,25 @@ export function detectBehavior(url: string): number {
   // Suspicious parameters
   try {
     const urlObj = new URL(url)
+    const hostname = urlObj.hostname
+
+    // Raw IP address instead of domain
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(hostname)) {
+      return 90
+    }
+
     const params = urlObj.searchParams
     
     if (params.size > 20) return 60
     
     const sensitiveParams = ['password', 'pwd', 'pass', 'token', 'auth', 'key', 'secret']
-    for (const param of params.keys()) {
-      if (sensitiveParams.some(s => param.toLowerCase().includes(s))) {
+    for (const [key, value] of params.entries()) {
+      if (sensitiveParams.some(s => key.toLowerCase().includes(s))) {
         return 70
+      }
+      // Check for suspicious values, e.g., redirecting to another URL
+      if (value.toLowerCase().includes('http://') || value.toLowerCase().includes('https://')) {
+        return 80
       }
     }
   } catch {
