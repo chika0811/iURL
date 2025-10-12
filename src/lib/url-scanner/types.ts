@@ -16,6 +16,7 @@ export interface ScanFactors {
   redirects: number
   entropy: number
   behavior: number
+  c2: number
 }
 
 export interface AllowlistEntry {
@@ -36,5 +37,6 @@ export const WEIGHTS = {
   certificate: 10,
   redirects: 10,
   entropy: 10,
-  behavior: 25
+  behavior: 25,
+  c2: 20
 } as const
