@@ -20,9 +20,14 @@ export default function Privacy() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-muted-foreground leading-relaxed mb-4">
               At iURL, we are committed to protecting your privacy and ensuring your data remains secure. 
               We believe in transparency and want you to understand exactly how we handle your information.
+            </p>
+            <p className="text-muted-foreground leading-relaxed font-semibold">
+              <strong className="text-primary">Important:</strong> Any data gathered from your clipboard or 
+              link scanning is processed entirely on your device and is NOT shared with any external entity, 
+              including the developers. Your privacy is our top priority.
             </p>
           </CardContent>
         </Card>
