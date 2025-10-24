@@ -78,11 +78,40 @@ export function useBackgroundService() {
   // Monitor clipboard for URLs with real-time detection
   const monitorClipboard = useCallback(async () => {
     try {
-      if (navigator.clipboard && navigator.clipboard.readText) {
-        // Request clipboard permission if needed
-        const permissionStatus = await navigator.permissions.query({ name: 'clipboard-read' as PermissionName })
+      // Check if running as native app (Capacitor)
+      if (window.Capacitor?.isNativePlatform()) {
+        // Use Capacitor Clipboard plugin for native apps
+        const { Clipboard } = await import('@capacitor/clipboard')
+        const result = await Clipboard.read()
+        const clipboardText = result.value
         
-        if (permissionStatus.state === 'granted' || permissionStatus.state === 'prompt') {
+        // Check if clipboard contains URL
+        if (clipboardText && isValidUrl(clipboardText.trim())) {
+          const savedUrls = JSON.parse(localStorage.getItem('iurl-monitored-urls') || '[]')
+          const isNewUrl = !savedUrls.includes(clipboardText.trim())
+          
+          if (isNewUrl) {
+            console.log('URL detected in clipboard:', clipboardText.trim())
+            
+            // Auto-paste URL to input field
+            window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
+              detail: { url: clipboardText.trim() }
+            }))
+            
+            // Save URL for monitoring
+            savedUrls.push(clipboardText.trim())
+            localStorage.setItem('iurl-monitored-urls', JSON.stringify(savedUrls))
+            
+            // Show toast notification
+            toast({
+              title: "URL Detected",
+              description: "Tap to check this link with iURL"
+            })
+          }
+        }
+      } else {
+        // Web version - requires user interaction due to browser security
+        if (navigator.clipboard && navigator.clipboard.readText && document.hasFocus()) {
           const clipboardText = await navigator.clipboard.readText()
           
           // Check if clipboard contains URL
@@ -105,15 +134,20 @@ export function useBackgroundService() {
               // Show toast notification
               toast({
                 title: "URL Detected",
-                description: "Clipboard URL automatically pasted for scanning"
+                description: "Clipboard URL ready for scanning"
               })
             }
           }
         }
       }
     } catch (error) {
-      // Clipboard access might be restricted, fail silently
-      console.log('Clipboard monitoring not available:', error)
+      // Clipboard access might be restricted, fail silently in web version
+      // This is normal behavior for web browsers when document is not focused
+      if (!window.Capacitor?.isNativePlatform()) {
+        console.log('Clipboard monitoring requires document focus (browser security)')
+      } else {
+        console.error('Clipboard monitoring error:', error)
+      }
     }
   }, [toast])
 
