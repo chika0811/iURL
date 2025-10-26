@@ -51,13 +51,11 @@ export default function Home() {
     }
   }, [])
 
-  // Auto-start clipboard monitoring when component mounts
+  // Auto-start clipboard monitoring when component mounts (always active)
   useEffect(() => {
     const initClipboardMonitoring = async () => {
-      if (isProtectionActive) {
-        const cleanup = await startBackgroundProtection()
-        setCleanupClipboard(() => cleanup)
-      }
+      const cleanup = await startBackgroundProtection()
+      setCleanupClipboard(() => cleanup)
     }
     
     initClipboardMonitoring()
@@ -67,7 +65,7 @@ export default function Home() {
         cleanupClipboard()
       }
     }
-  }, [isProtectionActive, startBackgroundProtection])
+  }, [startBackgroundProtection])
 
   const handleToggleProtection = async () => {
     if (isProtectionActive) {
