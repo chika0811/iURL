@@ -3,8 +3,126 @@ import { BottomNavigation } from "@/components/layout/bottom-navigation"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check } from "lucide-react"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
+import { useState, useEffect } from "react"
+import { useNavigate } from "react-router-dom"
 
 export default function Pricing() {
+  const { toast } = useToast()
+  const navigate = useNavigate()
+  const [loading, setLoading] = useState<string | null>(null)
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    // Get current user
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+
+    // Check for payment callback
+    const urlParams = new URLSearchParams(window.location.search)
+    const reference = urlParams.get('reference')
+    
+    if (reference) {
+      verifyPayment(reference)
+    }
+  }, [])
+
+  const verifyPayment = async (reference: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (!session) {
+        toast({
+          title: "Authentication required",
+          description: "Please log in to verify your payment",
+          variant: "destructive",
+        })
+        return
+      }
+
+      const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
+        body: { reference },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error) throw error
+
+      toast({
+        title: "Payment successful!",
+        description: `Your ${data.subscription.plan_name} subscription is now active`,
+      })
+
+      // Clear URL parameters
+      window.history.replaceState({}, '', '/pricing')
+    } catch (error: any) {
+      console.error('Payment verification error:', error)
+      toast({
+        title: "Payment verification failed",
+        description: error.message || "Please contact support",
+        variant: "destructive",
+      })
+    }
+  }
+
+  const handleSubscribe = async (planName: string, price: string) => {
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to subscribe",
+        variant: "destructive",
+      })
+      navigate('/login')
+      return
+    }
+
+    if (planName === "Free") {
+      toast({
+        title: "Free plan",
+        description: "You're already on the free plan!",
+      })
+      return
+    }
+
+    setLoading(planName)
+
+    try {
+      const amount = parseFloat(price.replace('$', ''))
+      const { data: { session } } = await supabase.auth.getSession()
+
+      if (!session) {
+        throw new Error('No active session')
+      }
+
+      const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
+        body: {
+          planName,
+          amount,
+          email: user.email,
+        },
+        headers: {
+          Authorization: `Bearer ${session.access_token}`,
+        },
+      })
+
+      if (error) throw error
+
+      // Redirect to Paystack payment page
+      window.location.href = data.authorization_url
+    } catch (error: any) {
+      console.error('Payment initialization error:', error)
+      toast({
+        title: "Payment failed",
+        description: error.message || "Unable to initialize payment",
+        variant: "destructive",
+      })
+      setLoading(null)
+    }
+  }
+
   const plans = [
     {
       name: "Free",
@@ -89,12 +207,14 @@ export default function Pricing() {
                 <Button 
                   className="w-full" 
                   variant="default"
-                  onClick={() => {
-                    // Payment integration will be added here
-                    console.log(`Selected plan: ${plan.name}`)
-                  }}
+                  onClick={() => handleSubscribe(plan.name, plan.price)}
+                  disabled={loading === plan.name}
                 >
-                  {plan.name === "Free" ? "Get Started" : "Subscribe Now"}
+                  {loading === plan.name 
+                    ? "Processing..." 
+                    : plan.name === "Free" 
+                    ? "Get Started" 
+                    : "Subscribe Now"}
                 </Button>
               </CardContent>
             </Card>
