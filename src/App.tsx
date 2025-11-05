@@ -7,7 +7,6 @@ import { ThemeProvider } from "@/components/theme-provider";
 import Welcome from "./pages/Welcome";
 import Home from "./pages/Home";
 import History from "./pages/History";
-import About from "./pages/About";
 import Privacy from "./pages/Privacy";
 import Pricing from "./pages/Pricing";
 import NotFound from "./pages/NotFound";
@@ -26,7 +25,6 @@ const App = () => (
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/home" element={<Home />} />
             <Route path="/history" element={<History />} />
-            <Route path="/about" element={<About />} />
             <Route path="/privacy" element={<Privacy />} />
             <Route path="/pricing" element={<Pricing />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}

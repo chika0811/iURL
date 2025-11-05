@@ -8,7 +8,7 @@ export function AppHeader() {
         <img 
           src={iurlLogo} 
           alt="iURL Logo" 
-          className="h-12 w-12 object-contain"
+          className="h-12 w-12 object-contain rounded-full"
         />
         <div>
           <h1 className="text-xl font-bold">iURL</h1>

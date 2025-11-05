@@ -48,10 +48,10 @@ export default function Pricing() {
   ]
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 flex flex-col">
       <AppHeader />
       
-      <main className="container mx-auto p-4 max-w-6xl">
+      <main className="container mx-auto p-4 max-w-6xl flex-1 flex flex-col justify-center">
         <div className="text-center mb-8">
           <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
           <p className="text-muted-foreground">
@@ -88,7 +88,7 @@ export default function Pricing() {
                 </ul>
                 <Button 
                   className="w-full" 
-                  variant={plan.popular ? "default" : "outline"}
+                  variant="default"
                   onClick={() => {
                     // Payment integration will be added here
                     console.log(`Selected plan: ${plan.name}`)

@@ -152,10 +152,10 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 flex flex-col">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto text-center">
+      <div className="p-4 space-y-6 max-w-lg mx-auto text-center flex-1 flex flex-col justify-center">
         {/* Real-time Protection Section */}
         <Card>
           <CardContent className="p-6">

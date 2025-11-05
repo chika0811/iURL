@@ -33,10 +33,10 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20">
+    <div className="min-h-screen bg-background pb-20 flex flex-col">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto">
+      <div className="p-4 space-y-6 max-w-lg mx-auto flex-1 flex flex-col justify-center">
         <div className="flex items-center justify-between">
           <h1 className="text-2xl font-bold">Scan History</h1>
           {history.length > 0 && (
