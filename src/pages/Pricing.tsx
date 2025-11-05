@@ -89,9 +89,12 @@ export default function Pricing() {
                 <Button 
                   className="w-full" 
                   variant={plan.popular ? "default" : "outline"}
-                  disabled
+                  onClick={() => {
+                    // Payment integration will be added here
+                    console.log(`Selected plan: ${plan.name}`)
+                  }}
                 >
-                  Coming Soon
+                  {plan.name === "Free" ? "Get Started" : "Subscribe Now"}
                 </Button>
               </CardContent>
             </Card>
