@@ -51,6 +51,8 @@ serve(async (req) => {
 
     // Initialize payment with Paystack
     const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY')
+    const paystackPublicKey = Deno.env.get('PAYSTACK_PUBLIC_KEY') || 'pk_test_xxxx'
+    
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
       headers: {
@@ -100,6 +102,8 @@ serve(async (req) => {
         authorization_url: data.data.authorization_url,
         access_code: data.data.access_code,
         reference: data.data.reference,
+        public_key: paystackPublicKey,
+        amount: Math.round(amount * 100), // Return amount in kobo for inline checkout
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )

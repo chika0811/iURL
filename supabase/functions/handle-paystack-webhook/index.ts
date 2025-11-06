@@ -43,14 +43,15 @@ serve(async (req) => {
     const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
     if (event === 'charge.success') {
-      const { reference, amount, metadata } = data
+      const { reference, amount, metadata, channel } = data
       const { plan_name, user_id } = metadata
 
       const startDate = new Date()
       const endDate = new Date()
       endDate.setMonth(endDate.getMonth() + 1)
 
-      const { error } = await supabase
+      // Update subscription status
+      const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .update({
           status: 'active',
@@ -58,25 +59,67 @@ serve(async (req) => {
           end_date: endDate.toISOString(),
         })
         .eq('paystack_reference', reference)
+        .select()
+        .single()
 
-      if (error) {
-        console.error('Error activating subscription:', error)
+      if (subError) {
+        console.error('Error activating subscription:', subError)
       } else {
         console.log('Subscription activated successfully for user:', user_id)
+        
+        // Record payment
+        const { error: paymentError } = await supabase
+          .from('payments')
+          .insert({
+            user_id,
+            subscription_id: subscription.id,
+            amount: amount / 100,
+            currency: data.currency || 'NGN',
+            paystack_reference: reference,
+            status: 'success',
+            payment_method: channel,
+            metadata: data
+          })
+        
+        if (paymentError) {
+          console.error('Error recording payment:', paymentError)
+        }
       }
     } else if (event === 'charge.failed') {
-      const { reference, metadata } = data
+      const { reference, metadata, amount } = data
       const { user_id } = metadata
 
-      const { error } = await supabase
+      // Update subscription status
+      const { data: subscription, error: subError } = await supabase
         .from('subscriptions')
         .update({ status: 'failed' })
         .eq('paystack_reference', reference)
+        .select()
+        .single()
 
-      if (error) {
-        console.error('Error updating subscription to failed:', error)
+      if (subError) {
+        console.error('Error updating subscription to failed:', subError)
       } else {
         console.log('Subscription status updated to failed for user:', user_id)
+        
+        // Record failed payment
+        if (subscription) {
+          const { error: paymentError } = await supabase
+            .from('payments')
+            .insert({
+              user_id,
+              subscription_id: subscription.id,
+              amount: amount / 100,
+              currency: data.currency || 'NGN',
+              paystack_reference: reference,
+              status: 'failed',
+              metadata: data
+            })
+          
+          if (paymentError) {
+            console.error('Error recording failed payment:', paymentError)
+          }
+        }
       }
     } else {
       console.warn('Unhandled Paystack webhook event:', event)

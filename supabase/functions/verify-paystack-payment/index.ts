@@ -87,6 +87,8 @@ serve(async (req) => {
       .eq('paystack_reference', reference)
       .single()
 
+    let subscriptionId: string
+
     if (existingSubscription) {
       // Update existing subscription
       const { error: updateError } = await supabase
@@ -102,9 +104,10 @@ serve(async (req) => {
         console.error('Error updating subscription:', updateError)
         throw updateError
       }
+      subscriptionId = existingSubscription.id
     } else {
       // Create new subscription
-      const { error: insertError } = await supabase
+      const { data: newSub, error: insertError } = await supabase
         .from('subscriptions')
         .insert({
           user_id: user.id,
@@ -115,11 +118,32 @@ serve(async (req) => {
           start_date: startDate.toISOString(),
           end_date: endDate.toISOString(),
         })
+        .select()
+        .single()
 
       if (insertError) {
         console.error('Error creating subscription:', insertError)
         throw insertError
       }
+      subscriptionId = newSub.id
+    }
+
+    // Record payment
+    const { error: paymentError } = await supabase
+      .from('payments')
+      .insert({
+        user_id: user.id,
+        subscription_id: subscriptionId,
+        amount: amount,
+        currency: verifyData.data.currency || 'NGN',
+        paystack_reference: reference,
+        status: 'success',
+        payment_method: verifyData.data.channel,
+        metadata: verifyData.data
+      })
+
+    if (paymentError) {
+      console.error('Error recording payment:', paymentError)
     }
 
     console.log('Subscription activated successfully for user:', user.id)

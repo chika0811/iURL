@@ -68,7 +68,6 @@ export function useUrlScanner() {
     toast({
       title,
       description,
-      variant: result.verdict === 'clean' ? "default" : "destructive",
     })
     
     setIsScanning(false)

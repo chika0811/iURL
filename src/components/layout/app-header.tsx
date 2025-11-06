@@ -1,7 +1,21 @@
 import { ThemeToggle } from "@/components/theme-toggle"
-import { Logo } from "@/components/ui/logo"
+import iurlLogo from "@/assets/iurl-logo.png"
+import { Button } from "@/components/ui/button"
+import { CreditCard } from "lucide-react"
+import { useNavigate } from "react-router-dom"
+import { supabase } from "@/integrations/supabase/client"
+import { useEffect, useState } from "react"
 
 export function AppHeader() {
+  const navigate = useNavigate()
+  const [user, setUser] = useState<any>(null)
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+    })
+  }, [])
+
   return (
     <header className="flex items-center justify-center p-4 bg-background border-b border-border relative">
       <div className="flex items-center space-x-3">
@@ -11,7 +25,17 @@ export function AppHeader() {
           <p className="text-sm text-muted-foreground">Smart Link Protection</p>
         </div>
       </div>
-      <div className="absolute right-4">
+      <div className="absolute right-4 flex items-center gap-2">
+        {user && (
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => navigate("/subscription")}
+          >
+            <CreditCard className="mr-2 h-4 w-4" />
+            Subscription
+          </Button>
+        )}
         <ThemeToggle />
       </div>
     </header>
