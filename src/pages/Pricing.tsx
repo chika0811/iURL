@@ -19,54 +19,7 @@ export default function Pricing() {
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user)
     })
-
-    // Check for payment callback
-    const urlParams = new URLSearchParams(window.location.search)
-    const reference = urlParams.get('reference')
-    
-    if (reference) {
-      verifyPayment(reference)
-    }
   }, [])
-
-  const verifyPayment = async (reference: string) => {
-    try {
-      const { data: { session } } = await supabase.auth.getSession()
-      
-      if (!session) {
-        toast({
-          title: "Authentication required",
-          description: "Please log in to verify your payment",
-          variant: "destructive",
-        })
-        return
-      }
-
-      const { data, error } = await supabase.functions.invoke('verify-paystack-payment', {
-        body: { reference },
-        headers: {
-          Authorization: `Bearer ${session.access_token}`,
-        },
-      })
-
-      if (error) throw error
-
-      toast({
-        title: "Payment successful!",
-        description: `Your ${data.subscription.plan_name} subscription is now active`,
-      })
-
-      // Clear URL parameters
-      window.history.replaceState({}, '', '/pricing')
-    } catch (error: any) {
-      console.error('Payment verification error:', error)
-      toast({
-        title: "Payment verification failed",
-        description: error.message || "Please contact support",
-        variant: "destructive",
-      })
-    }
-  }
 
   const handleSubscribe = async (planName: string, price: string) => {
     if (!user) {
