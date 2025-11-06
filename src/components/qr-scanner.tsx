@@ -56,7 +56,6 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
       toast({
         title: "Camera Error",
         description: "Unable to access camera. Please check permissions.",
-        variant: "destructive"
       })
       onClose()
     }
@@ -122,7 +121,6 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
         toast({
           title: "Invalid QR Code",
           description: "QR code does not contain a valid URL.",
-          variant: "destructive"
         })
       }
     } catch (error) {
@@ -130,7 +128,6 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
       toast({
         title: "QR Scan Failed",
         description: "Could not detect QR code in image.",
-        variant: "destructive"
       })
     }
     setIsScanning(false)

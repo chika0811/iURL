@@ -33,7 +33,6 @@ export function AllowlistManager({ open, onClose }: AllowlistManagerProps) {
       toast({
         title: "Error",
         description: "Failed to add domain",
-        variant: "destructive"
       })
     }
   }

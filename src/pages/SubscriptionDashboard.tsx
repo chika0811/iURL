@@ -81,7 +81,6 @@ export default function SubscriptionDashboard() {
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -112,7 +111,6 @@ export default function SubscriptionDashboard() {
       toast({
         title: "Error",
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setCancelling(false);

@@ -24,19 +24,33 @@ export default function Login() {
       const { error } = await supabase.auth.signUp({
         email,
         password,
+        options: {
+          emailRedirectTo: `${window.location.origin}/home`
+        }
       });
 
       if (error) throw error;
 
       toast({
-        title: "Success!",
-        description: "Account created successfully. You can now log in.",
+        title: "Account created!",
+        description: "Signing you in...",
       });
+      
+      // Auto sign in after signup
+      setTimeout(async () => {
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
+        
+        if (!signInError) {
+          navigate("/home");
+        }
+      }, 1000);
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Sign up failed",
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setLoading(false);
@@ -63,9 +77,8 @@ export default function Login() {
       navigate("/home");
     } catch (error: any) {
       toast({
-        title: "Error",
+        title: "Sign in failed",
         description: error.message,
-        variant: "destructive",
       });
     } finally {
       setLoading(false);

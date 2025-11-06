@@ -70,6 +70,7 @@ export type Database = {
           paystack_reference: string | null
           paystack_subscription_code: string | null
           plan_name: string
+          plan_type: string
           start_date: string | null
           status: string
           updated_at: string
@@ -83,6 +84,7 @@ export type Database = {
           paystack_reference?: string | null
           paystack_subscription_code?: string | null
           plan_name: string
+          plan_type?: string
           start_date?: string | null
           status?: string
           updated_at?: string
@@ -96,8 +98,39 @@ export type Database = {
           paystack_reference?: string | null
           paystack_subscription_code?: string | null
           plan_name?: string
+          plan_type?: string
           start_date?: string | null
           status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_scan_usage: {
+        Row: {
+          created_at: string
+          id: string
+          month_year: string
+          plan_type: string
+          scan_count: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          month_year: string
+          plan_type?: string
+          scan_count?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          month_year?: string
+          plan_type?: string
+          scan_count?: number
           updated_at?: string
           user_id?: string
         }

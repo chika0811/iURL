@@ -8,11 +8,55 @@ import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
 
+// Declare Paystack type
+declare global {
+  interface Window {
+    PaystackPop: any;
+  }
+}
+
+// Currency conversion rates (approximate, should be fetched from API in production)
+const CURRENCY_RATES: Record<string, { symbol: string; rate: number; code: string }> = {
+  'NG': { symbol: '₦', rate: 1650, code: 'NGN' },
+  'GH': { symbol: '₵', rate: 15.5, code: 'GHS' },
+  'KE': { symbol: 'KSh', rate: 160, code: 'KES' },
+  'ZA': { symbol: 'R', rate: 19, code: 'ZAR' },
+  'US': { symbol: '$', rate: 1, code: 'USD' },
+}
+
 export default function Pricing() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
+  const [userCountry, setUserCountry] = useState<string>('US')
+  const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['US'])
+
+  useEffect(() => {
+    // Load Paystack SDK
+    const script = document.createElement('script')
+    script.src = 'https://js.paystack.co/v1/inline.js'
+    script.async = true
+    document.body.appendChild(script)
+
+    // Detect user's country (using a simple IP geolocation in production)
+    // For now, defaulting to Nigeria for Paystack
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        const country = data.country_code || 'US'
+        setUserCountry(country)
+        setLocalCurrency(CURRENCY_RATES[country] || CURRENCY_RATES['US'])
+      })
+      .catch(() => {
+        setUserCountry('NG')
+        setLocalCurrency(CURRENCY_RATES['NG'])
+      })
+
+    return () => {
+      document.body.removeChild(script)
+    }
+  }, [])
 
   useEffect(() => {
     // Get current user
@@ -26,7 +70,6 @@ export default function Pricing() {
       toast({
         title: "Authentication required",
         description: "Please log in to subscribe",
-        variant: "destructive",
       })
       navigate('/login')
       return
@@ -80,14 +123,55 @@ export default function Pricing() {
 
       if (error) throw error
 
-      // Redirect to Paystack payment page
-      window.location.href = data.authorization_url
+      // Use Paystack Inline instead of redirect
+      if (window.PaystackPop) {
+        const handler = window.PaystackPop.setup({
+          key: data.public_key || 'pk_test_xxxx', // This should come from your edge function
+          email: user.email,
+          amount: data.amount,
+          currency: localCurrency.code,
+          ref: data.reference,
+          callback: async (response: any) => {
+            // Verify payment
+            const { error: verifyError } = await supabase.functions.invoke('verify-paystack-payment', {
+              body: { reference: response.reference },
+              headers: {
+                Authorization: `Bearer ${session.access_token}`,
+              },
+            })
+
+            if (verifyError) {
+              toast({
+                title: "Verification failed",
+                description: "Payment verification failed. Please contact support.",
+              })
+            } else {
+              toast({
+                title: "Success!",
+                description: "Your subscription is now active.",
+              })
+              navigate('/subscription')
+            }
+            setLoading(null)
+          },
+          onClose: () => {
+            setLoading(null)
+            toast({
+              title: "Payment cancelled",
+              description: "You cancelled the payment process.",
+            })
+          }
+        })
+        handler.openIframe()
+      } else {
+        // Fallback to redirect if Paystack SDK not loaded
+        window.location.href = data.authorization_url
+      }
     } catch (error: any) {
       console.error('Payment initialization error:', error)
       toast({
         title: "Payment failed",
         description: error.message || "Unable to initialize payment",
-        variant: "destructive",
       })
       setLoading(null)
     }
@@ -151,18 +235,25 @@ export default function Pricing() {
           {plans.filter(plan => plan.name !== "Free").map((plan) => (
             <Card 
               key={plan.name}
-              className={`flex flex-col ${plan.popular ? "border-primary shadow-lg" : ""}`}
+              className="flex flex-col transition-all hover:border-primary hover:shadow-lg"
             >
               <CardHeader>
-                {plan.popular && (
-                  <div className="bg-primary text-primary-foreground text-xs font-semibold px-3 py-1 rounded-full w-fit mb-2">
-                    Most Popular
-                  </div>
-                )}
                 <CardTitle className="text-2xl">{plan.name}</CardTitle>
                 <CardDescription>
-                  <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                  <span className="text-muted-foreground">/{plan.period}</span>
+                  <div className="space-y-1">
+                    <div>
+                      <span className="text-3xl font-bold text-foreground">{plan.price}</span>
+                      <span className="text-muted-foreground"> USD/{plan.period}</span>
+                    </div>
+                    {userCountry !== 'US' && (
+                      <div className="text-sm">
+                        <span className="text-foreground font-semibold">
+                          {localCurrency.symbol}{(parseFloat(plan.price.replace('$', '')) * localCurrency.rate).toFixed(2)}
+                        </span>
+                        <span className="text-muted-foreground"> {localCurrency.code}/{plan.period}</span>
+                      </div>
+                    )}
+                  </div>
                 </CardDescription>
               </CardHeader>
               <CardContent className="flex-1 flex flex-col">

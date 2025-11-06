@@ -13,8 +13,10 @@ import { AllowlistManager } from "@/components/allowlist-manager"
 import { useUrlScanner, ScanResult } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 import { useBackgroundService } from "@/hooks/use-background-service"
+import { useScanLimit } from "@/hooks/use-scan-limit"
 import { addToAllowlist } from "@/lib/url-scanner/allowlist"
 import { useToast } from "@/hooks/use-toast"
+import { useNavigate } from "react-router-dom"
 
 export default function Home() {
   const [url, setUrl] = useState("")
@@ -27,7 +29,9 @@ export default function Home() {
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
   const { startBackgroundProtection, stopBackgroundProtection } = useBackgroundService()
+  const { scanLimit, incrementScanCount } = useScanLimit()
   const { toast } = useToast()
+  const navigate = useNavigate()
 
   useEffect(() => {
     // Listen for URL scan requests from notifications
@@ -85,12 +89,27 @@ export default function Home() {
   const handleScanUrl = async () => {
     if (!url.trim()) return
     
+    // Check scan limit for free users
+    if (scanLimit && !scanLimit.canScan) {
+      toast({
+        title: "Scan limit reached",
+        description: `Free plan allows ${scanLimit.total} scans per month. Upgrade to continue scanning.`,
+      })
+      navigate('/pricing')
+      return
+    }
+    
     setShowPopup(true)
     setScanResult(null)
     
     try {
       const result = await scanUrl(url.trim())
       setScanResult(result)
+      
+      // Increment scan count after successful scan
+      if (scanLimit && scanLimit.planType === 'free') {
+        await incrementScanCount()
+      }
     } catch (error) {
       console.error("Error scanning URL:", error)
       setShowPopup(false)
@@ -145,7 +164,6 @@ export default function Home() {
         toast({
           title: "Error",
           description: "Failed to add domain to allowlist",
-          variant: "destructive"
         })
       }
     }
@@ -201,6 +219,15 @@ export default function Home() {
                 <div className="text-sm text-muted-foreground">Threats Stopped</div>
               </div>
             </div>
+            
+            {scanLimit && scanLimit.planType === 'free' && (
+              <div className="text-center p-3 bg-muted rounded-lg">
+                <div className="text-sm text-muted-foreground">Monthly Scans</div>
+                <div className="text-lg font-semibold">
+                  {scanLimit.remaining} / {scanLimit.total} remaining
+                </div>
+              </div>
+            )}
             
             {isProtectionActive && (
               <Badge variant="secondary" className="w-full justify-center">
