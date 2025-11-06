@@ -40,6 +40,23 @@ export default function Pricing() {
       return
     }
 
+    // Check for active subscription
+    const { data: existingSub } = await supabase
+      .from("subscriptions")
+      .select("*")
+      .eq("user_id", user.id)
+      .eq("status", "active")
+      .maybeSingle()
+
+    if (existingSub) {
+      toast({
+        title: "Active subscription",
+        description: "You already have an active subscription. Visit your dashboard to manage it.",
+      })
+      navigate("/subscription")
+      return
+    }
+
     setLoading(planName)
 
     try {
