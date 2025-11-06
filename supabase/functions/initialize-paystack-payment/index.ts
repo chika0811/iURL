@@ -64,7 +64,7 @@ serve(async (req) => {
           plan_name: planName,
           user_id: user.id,
         },
-        callback_url: `${req.headers.get('origin')}/pricing`,
+        callback_url: `${req.headers.get('origin')}/payment-status`,
       }),
     })
 
