@@ -147,11 +147,11 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6">
-          {plans.map((plan) => (
+        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
+          {plans.filter(plan => plan.name !== "Free").map((plan) => (
             <Card 
               key={plan.name}
-              className={plan.popular ? "border-primary shadow-lg" : ""}
+              className={`flex flex-col ${plan.popular ? "border-primary shadow-lg" : ""}`}
             >
               <CardHeader>
                 {plan.popular && (
@@ -165,8 +165,8 @@ export default function Pricing() {
                   <span className="text-muted-foreground">/{plan.period}</span>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <ul className="space-y-3 mb-6">
+              <CardContent className="flex-1 flex flex-col">
+                <ul className="space-y-3 mb-6 flex-1">
                   {plan.features.map((feature) => (
                     <li key={feature} className="flex items-start gap-2">
                       <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
@@ -174,7 +174,7 @@ export default function Pricing() {
                     </li>
                   ))}
                 </ul>
-                <Button 
+                <Button
                   className="w-full" 
                   variant="default"
                   onClick={() => handleSubscribe(plan.name, plan.price)}
