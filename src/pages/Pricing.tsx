@@ -124,45 +124,73 @@ export default function Pricing() {
       if (error) throw error
 
       // Use Paystack Inline instead of redirect
-      if (window.PaystackPop) {
-        const handler = window.PaystackPop.setup({
-          key: data.public_key || 'pk_test_xxxx', // This should come from your edge function
-          email: user.email,
-          amount: data.amount,
-          currency: localCurrency.code,
-          ref: data.reference,
-          callback: async (response: any) => {
-            // Verify payment
-            const { error: verifyError } = await supabase.functions.invoke('verify-paystack-payment', {
-              body: { reference: response.reference },
-              headers: {
-                Authorization: `Bearer ${session.access_token}`,
-              },
-            })
+      if (window.PaystackPop && data.public_key) {
+        try {
+          const handler = window.PaystackPop.setup({
+            key: data.public_key,
+            email: user.email,
+            amount: data.amount,
+            currency: localCurrency.code,
+            ref: data.reference,
+            callback: async (response: any) => {
+              console.log('Payment completed:', response.reference)
+              
+              // Get fresh session token for verification
+              const { data: { session: currentSession } } = await supabase.auth.getSession()
+              if (!currentSession) {
+                toast({
+                  title: "Authentication error",
+                  description: "Please log in again",
+                })
+                setLoading(null)
+                return
+              }
 
-            if (verifyError) {
+              // Verify payment with backend
+              const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+                'verify-paystack-payment',
+                {
+                  body: { reference: response.reference },
+                  headers: {
+                    Authorization: `Bearer ${currentSession.access_token}`,
+                  },
+                }
+              )
+
+              if (verifyError || !verifyData?.success) {
+                console.error('Verification error:', verifyError)
+                toast({
+                  title: "Verification failed",
+                  description: verifyError?.message || "Please contact support",
+                })
+              } else {
+                toast({
+                  title: "Success!",
+                  description: "Your subscription is now active.",
+                })
+                setTimeout(() => navigate('/subscription-dashboard'), 1500)
+              }
+              setLoading(null)
+            },
+            onClose: () => {
+              setLoading(null)
               toast({
-                title: "Verification failed",
-                description: "Payment verification failed. Please contact support.",
+                title: "Payment cancelled",
+                description: "You closed the payment window.",
               })
-            } else {
-              toast({
-                title: "Success!",
-                description: "Your subscription is now active.",
-              })
-              navigate('/subscription')
             }
-            setLoading(null)
-          },
-          onClose: () => {
-            setLoading(null)
-            toast({
-              title: "Payment cancelled",
-              description: "You cancelled the payment process.",
-            })
-          }
-        })
-        handler.openIframe()
+          })
+          handler.openIframe()
+        } catch (popupError) {
+          console.error('Paystack popup error:', popupError)
+          toast({
+            title: "Error",
+            description: "Failed to open payment window. Redirecting...",
+          })
+          setTimeout(() => {
+            window.location.href = data.authorization_url
+          }, 2000)
+        }
       } else {
         // Fallback to redirect if Paystack SDK not loaded
         window.location.href = data.authorization_url

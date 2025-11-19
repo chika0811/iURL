@@ -51,7 +51,14 @@ serve(async (req) => {
 
     // Initialize payment with Paystack
     const paystackSecretKey = Deno.env.get('PAYSTACK_SECRET_KEY')
-    const paystackPublicKey = Deno.env.get('PAYSTACK_PUBLIC_KEY') || 'pk_test_xxxx'
+    const paystackPublicKey = Deno.env.get('PAYSTACK_PUBLIC_KEY')
+    
+    if (!paystackSecretKey || !paystackPublicKey) {
+      return new Response(
+        JSON.stringify({ error: 'Paystack keys not configured' }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
     
     const response = await fetch('https://api.paystack.co/transaction/initialize', {
       method: 'POST',
