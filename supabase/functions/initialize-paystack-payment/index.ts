@@ -13,7 +13,7 @@ serve(async (req) => {
   }
 
   try {
-    const { planName, amount, email } = await req.json()
+    const { planName, amount, email, currency } = await req.json()
 
     if (!planName || !amount || !email) {
       return new Response(
@@ -21,6 +21,8 @@ serve(async (req) => {
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    console.log('Initializing payment for:', { planName, amount, email, currency })
 
     console.log('Initializing payment for:', { planName, amount, email })
 
@@ -68,10 +70,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         email: email,
-        amount: Math.round(amount * 100), // Convert to kobo (or cents)
+        amount: Math.round(amount * 100), // Convert to kobo (amount is already in local currency)
+        currency: currency || 'NGN',
         metadata: {
           plan_name: planName,
           user_id: user.id,
+          original_currency: currency || 'NGN',
         },
         callback_url: `${req.headers.get('origin')}/payment-status`,
       }),
