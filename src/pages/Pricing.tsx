@@ -103,7 +103,10 @@ export default function Pricing() {
     setLoading(planName)
 
     try {
-      const amount = parseFloat(price.replace('$', ''))
+      const usdAmount = parseFloat(price.replace('$', ''))
+      // Convert USD to local currency
+      const localAmount = usdAmount * localCurrency.rate
+      
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -113,7 +116,8 @@ export default function Pricing() {
       const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
         body: {
           planName,
-          amount,
+          amount: localAmount, // Send amount in local currency
+          currency: localCurrency.code,
           email: user.email,
         },
         headers: {
@@ -129,7 +133,7 @@ export default function Pricing() {
           const handler = window.PaystackPop.setup({
             key: data.public_key,
             email: user.email,
-            amount: data.amount,
+            amount: data.amount, // Amount already in kobo/cents from backend
             currency: localCurrency.code,
             ref: data.reference,
             callback: async (response: any) => {
