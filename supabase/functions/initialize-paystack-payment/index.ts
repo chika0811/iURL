@@ -24,8 +24,6 @@ serve(async (req) => {
 
     console.log('Initializing payment for:', { planName, amount, email, currency })
 
-    console.log('Initializing payment for:', { planName, amount, email })
-
     // Initialize Supabase client
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!
     const supabaseServiceKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!

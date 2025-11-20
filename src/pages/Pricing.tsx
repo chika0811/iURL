@@ -29,8 +29,9 @@ export default function Pricing() {
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
   const [user, setUser] = useState<any>(null)
-  const [userCountry, setUserCountry] = useState<string>('US')
-  const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['US'])
+  const [userCountry, setUserCountry] = useState<string>('NG')
+  const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['NG'])
+  const [currencyLoading, setCurrencyLoading] = useState(true)
 
   useEffect(() => {
     // Load Paystack SDK
@@ -40,17 +41,20 @@ export default function Pricing() {
     document.body.appendChild(script)
 
     // Detect user's country (using a simple IP geolocation in production)
-    // For now, defaulting to Nigeria for Paystack
+    // Defaulting to Nigeria for Paystack compatibility
     fetch('https://ipapi.co/json/')
       .then(res => res.json())
       .then(data => {
-        const country = data.country_code || 'US'
+        const country = data.country_code || 'NG'
         setUserCountry(country)
-        setLocalCurrency(CURRENCY_RATES[country] || CURRENCY_RATES['US'])
+        setLocalCurrency(CURRENCY_RATES[country] || CURRENCY_RATES['NG'])
       })
       .catch(() => {
         setUserCountry('NG')
         setLocalCurrency(CURRENCY_RATES['NG'])
+      })
+      .finally(() => {
+        setCurrencyLoading(false)
       })
 
     return () => {
@@ -72,6 +76,14 @@ export default function Pricing() {
         description: "Please log in to subscribe",
       })
       navigate('/login')
+      return
+    }
+
+    if (currencyLoading) {
+      toast({
+        title: "Please wait",
+        description: "Detecting your currency...",
+      })
       return
     }
 
@@ -301,10 +313,12 @@ export default function Pricing() {
                   className="w-full" 
                   variant="default"
                   onClick={() => handleSubscribe(plan.name, plan.price)}
-                  disabled={loading === plan.name}
+                  disabled={loading === plan.name || currencyLoading}
                 >
                   {loading === plan.name 
                     ? "Processing..." 
+                    : currencyLoading
+                    ? "Loading..."
                     : plan.name === "Free" 
                     ? "Get Started" 
                     : "Subscribe Now"}
