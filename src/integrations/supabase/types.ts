@@ -14,6 +14,60 @@ export type Database = {
   }
   public: {
     Tables: {
+      allowlist: {
+        Row: {
+          added_at: string
+          created_at: string
+          domain: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          added_at?: string
+          created_at?: string
+          domain: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          added_at?: string
+          created_at?: string
+          domain?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      daily_stats: {
+        Row: {
+          created_at: string
+          date: string
+          id: string
+          links_checked: number
+          threats_blocked: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          date: string
+          id?: string
+          links_checked?: number
+          threats_blocked?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          date?: string
+          id?: string
+          links_checked?: number
+          threats_blocked?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number
@@ -60,6 +114,48 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      scan_history: {
+        Row: {
+          created_at: string
+          id: string
+          reasons: string[] | null
+          safe: boolean
+          scan_count: number
+          score: number
+          timestamp: string
+          updated_at: string
+          url: string
+          user_id: string
+          verdict: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          reasons?: string[] | null
+          safe: boolean
+          scan_count?: number
+          score: number
+          timestamp?: string
+          updated_at?: string
+          url: string
+          user_id: string
+          verdict: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          reasons?: string[] | null
+          safe?: boolean
+          scan_count?: number
+          score?: number
+          timestamp?: string
+          updated_at?: string
+          url?: string
+          user_id?: string
+          verdict?: string
+        }
+        Relationships: []
       }
       subscriptions: {
         Row: {
