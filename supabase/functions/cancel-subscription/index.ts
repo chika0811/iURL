@@ -43,6 +43,21 @@ serve(async (req) => {
       )
     }
 
+    // Get subscription details before cancelling
+    const { data: subscription, error: fetchError } = await supabase
+      .from('subscriptions')
+      .select('*')
+      .eq('id', subscriptionId)
+      .eq('user_id', user.id)
+      .single()
+
+    if (fetchError || !subscription) {
+      return new Response(
+        JSON.stringify({ error: 'Subscription not found' }),
+        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
+    }
+
     // Update subscription status to cancelled
     const { error: updateError } = await supabase
       .from('subscriptions')
@@ -53,6 +68,24 @@ serve(async (req) => {
     if (updateError) {
       console.error('Error cancelling subscription:', updateError)
       throw updateError
+    }
+
+    // Send cancellation email
+    try {
+      await supabase.functions.invoke('send-subscription-email', {
+        body: {
+          to: user.email,
+          type: 'cancelled',
+          subscriptionDetails: {
+            planName: subscription.plan_name,
+            amount: subscription.amount,
+            endDate: subscription.end_date
+          }
+        }
+      })
+    } catch (emailError) {
+      console.error('Error sending cancellation email:', emailError)
+      // Don't fail the cancellation if email fails
     }
 
     console.log('Subscription cancelled for user:', user.id)
