@@ -129,21 +129,41 @@ serve(async (req) => {
     }
 
     // Record payment
+    const paymentData = verifyData.data
     const { error: paymentError } = await supabase
       .from('payments')
       .insert({
         user_id: user.id,
         subscription_id: subscriptionId,
         amount: amount,
-        currency: verifyData.data.currency || 'NGN',
+        currency: paymentData.currency || 'NGN',
         paystack_reference: reference,
         status: 'success',
-        payment_method: verifyData.data.channel,
-        metadata: verifyData.data
+        payment_method: paymentData.channel,
+        metadata: paymentData
       })
 
     if (paymentError) {
       console.error('Error recording payment:', paymentError)
+    }
+
+    // Send activation email
+    try {
+      await supabase.functions.invoke('send-subscription-email', {
+        body: {
+          to: user.email,
+          type: 'activated',
+          subscriptionDetails: {
+            planName: planName,
+            amount: amount,
+            endDate: endDate.toISOString()
+          }
+        }
+      })
+      console.log('Activation email sent to:', user.email)
+    } catch (emailError) {
+      console.error('Error sending activation email:', emailError)
+      // Don't fail the payment if email fails
     }
 
     console.log('Subscription activated successfully for user:', user.id)
