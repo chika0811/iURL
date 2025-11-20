@@ -9,6 +9,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Loader2, CreditCard, Calendar, TrendingUp } from "lucide-react";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { format } from "date-fns";
+import { AppHeader } from "@/components/layout/app-header";
+import { BottomNavigation } from "@/components/layout/bottom-navigation";
 
 interface Subscription {
   id: string;
@@ -129,20 +131,27 @@ export default function SubscriptionDashboard() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin" />
+      <div className="min-h-screen bg-background pb-20 flex flex-col">
+        <AppHeader />
+        <div className="flex-1 flex items-center justify-center">
+          <Loader2 className="h-8 w-8 animate-spin" />
+        </div>
+        <BottomNavigation />
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto py-8 px-4 max-w-6xl">
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-3xl font-bold">Subscription Dashboard</h1>
-        <Button variant="outline" onClick={() => navigate("/")}>
-          Back to Home
-        </Button>
-      </div>
+    <div className="min-h-screen bg-background pb-20 flex flex-col">
+      <AppHeader />
+      
+      <main className="container mx-auto py-8 px-4 max-w-6xl flex-1">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">Subscription Dashboard</h1>
+          <Button variant="outline" onClick={() => navigate("/home")}>
+            Back to Home
+          </Button>
+        </div>
 
       <div className="grid gap-6 md:grid-cols-2 mb-8">
         <Card>
@@ -289,6 +298,9 @@ export default function SubscriptionDashboard() {
           )}
         </CardContent>
       </Card>
+      </main>
+      
+      <BottomNavigation />
     </div>
   );
 }
