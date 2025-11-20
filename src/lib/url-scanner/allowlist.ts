@@ -1,6 +1,5 @@
 import { AllowlistEntry } from './types'
-
-const STORAGE_KEY = 'iurl-allowlist'
+import { supabase } from '@/integrations/supabase/client'
 
 // Built-in trusted domains
 const BUILTIN_ALLOWLIST = [
@@ -12,48 +11,83 @@ const BUILTIN_ALLOWLIST = [
   'chatgpt.com', 'openai.com', 'claude.ai', 'anthropic.com'
 ]
 
-export function getAllowlist(): AllowlistEntry[] {
+export async function getAllowlist(): Promise<AllowlistEntry[]> {
   try {
-    const stored = localStorage.getItem(STORAGE_KEY)
-    const userList = stored ? JSON.parse(stored) : []
+    const { data: { session } } = await supabase.auth.getSession()
     
-    // Combine built-in and user lists
+    // Built-in entries
     const builtinEntries: AllowlistEntry[] = BUILTIN_ALLOWLIST.map(domain => ({
       domain,
       addedAt: 0,
       userAdded: false
     }))
     
-    return [...builtinEntries, ...userList]
-  } catch {
-    return []
+    if (!session) {
+      return builtinEntries
+    }
+
+    // Get user's custom domains
+    const { data, error } = await supabase
+      .from('allowlist')
+      .select('*')
+      .eq('user_id', session.user.id)
+
+    if (error) throw error
+
+    const userEntries: AllowlistEntry[] = (data || []).map(item => ({
+      domain: item.domain,
+      addedAt: new Date(item.added_at).getTime(),
+      userAdded: true
+    }))
+    
+    return [...builtinEntries, ...userEntries]
+  } catch (error) {
+    console.error('Error loading allowlist:', error)
+    // Return built-in only on error
+    return BUILTIN_ALLOWLIST.map(domain => ({
+      domain,
+      addedAt: 0,
+      userAdded: false
+    }))
   }
 }
 
-export function addToAllowlist(domain: string): void {
-  const allowlist = getAllowlist().filter(e => e.userAdded)
+export async function addToAllowlist(domain: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated')
+
   const normalized = normalizeDomain(domain)
   
-  if (!allowlist.some(e => e.domain === normalized)) {
-    allowlist.push({
+  const { error } = await supabase
+    .from('allowlist')
+    .insert({
+      user_id: session.user.id,
       domain: normalized,
-      addedAt: Date.now(),
-      userAdded: true
+      added_at: new Date().toISOString()
     })
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(allowlist))
+
+  if (error && error.code !== '23505') { // Ignore duplicate errors
+    throw error
   }
 }
 
-export function removeFromAllowlist(domain: string): void {
-  const allowlist = getAllowlist().filter(e => e.userAdded)
-  const filtered = allowlist.filter(e => e.domain !== domain)
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(filtered))
+export async function removeFromAllowlist(domain: string): Promise<void> {
+  const { data: { session } } = await supabase.auth.getSession()
+  if (!session) throw new Error('Not authenticated')
+
+  const { error } = await supabase
+    .from('allowlist')
+    .delete()
+    .eq('user_id', session.user.id)
+    .eq('domain', domain)
+
+  if (error) throw error
 }
 
-export function isInAllowlist(url: string): boolean {
+export async function isInAllowlist(url: string): Promise<boolean> {
   try {
     const domain = new URL(url).hostname.toLowerCase()
-    const allowlist = getAllowlist()
+    const allowlist = await getAllowlist()
     
     return allowlist.some(entry => {
       const entryDomain = entry.domain.toLowerCase()

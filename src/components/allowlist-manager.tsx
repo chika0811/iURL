@@ -1,5 +1,5 @@
-import { useState } from "react"
-import { Shield, Plus, Trash2, X } from "lucide-react"
+import { useState, useEffect } from "react"
+import { Shield, Plus, Trash2 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { getAllowlist, addToAllowlist, removeFromAllowlist } from "@/lib/url-scanner/allowlist"
 import { useToast } from "@/hooks/use-toast"
+import { AllowlistEntry } from "@/lib/url-scanner/types"
 
 interface AllowlistManagerProps {
   open: boolean
@@ -15,15 +16,32 @@ interface AllowlistManagerProps {
 
 export function AllowlistManager({ open, onClose }: AllowlistManagerProps) {
   const [newDomain, setNewDomain] = useState("")
-  const [allowlist, setAllowlist] = useState(getAllowlist())
+  const [allowlist, setAllowlist] = useState<AllowlistEntry[]>([])
+  const [loading, setLoading] = useState(false)
   const { toast } = useToast()
 
-  const handleAdd = () => {
+  useEffect(() => {
+    if (open) {
+      loadAllowlist()
+    }
+  }, [open])
+
+  const loadAllowlist = async () => {
+    try {
+      const list = await getAllowlist()
+      setAllowlist(list)
+    } catch (error) {
+      console.error('Error loading allowlist:', error)
+    }
+  }
+
+  const handleAdd = async () => {
     if (!newDomain.trim()) return
     
+    setLoading(true)
     try {
-      addToAllowlist(newDomain)
-      setAllowlist(getAllowlist())
+      await addToAllowlist(newDomain)
+      await loadAllowlist()
       setNewDomain("")
       toast({
         title: "Domain added",
@@ -33,17 +51,31 @@ export function AllowlistManager({ open, onClose }: AllowlistManagerProps) {
       toast({
         title: "Error",
         description: "Failed to add domain",
+        variant: "destructive"
       })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleRemove = (domain: string) => {
-    removeFromAllowlist(domain)
-    setAllowlist(getAllowlist())
-    toast({
-      title: "Domain removed",
-      description: `${domain} removed from allowlist`,
-    })
+  const handleRemove = async (domain: string) => {
+    setLoading(true)
+    try {
+      await removeFromAllowlist(domain)
+      await loadAllowlist()
+      toast({
+        title: "Domain removed",
+        description: `${domain} removed from allowlist`,
+      })
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to remove domain",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
+    }
   }
 
   const userDomains = allowlist.filter(e => e.userAdded)
@@ -66,8 +98,9 @@ export function AllowlistManager({ open, onClose }: AllowlistManagerProps) {
               value={newDomain}
               onChange={(e) => setNewDomain(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleAdd()}
+              disabled={loading}
             />
-            <Button onClick={handleAdd} size="icon">
+            <Button onClick={handleAdd} size="icon" disabled={loading}>
               <Plus className="h-4 w-4" />
             </Button>
           </div>
@@ -85,6 +118,7 @@ export function AllowlistManager({ open, onClose }: AllowlistManagerProps) {
                       variant="ghost"
                       size="icon"
                       onClick={() => handleRemove(entry.domain)}
+                      disabled={loading}
                     >
                       <Trash2 className="h-4 w-4" />
                     </Button>

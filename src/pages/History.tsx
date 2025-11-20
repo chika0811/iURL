@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScanResult } from "@/hooks/use-url-scanner"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface HistoryItem extends ScanResult {
   count?: number
@@ -13,23 +15,107 @@ interface HistoryItem extends ScanResult {
 
 export default function History() {
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
-    const savedHistory = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
-    setHistory(savedHistory)
+    loadHistory()
   }, [])
 
-  const clearHistory = () => {
-    if (confirm('Are you sure you want to clear all history?')) {
-      localStorage.removeItem('iurl-safe-history')
-      setHistory([])
+  const loadHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) {
+        setLoading(false)
+        return
+      }
+
+      const { data, error } = await supabase
+        .from('scan_history')
+        .select('*')
+        .order('timestamp', { ascending: false })
+        .limit(50)
+
+      if (error) throw error
+
+      const formattedHistory: HistoryItem[] = (data || []).map(item => ({
+        url: item.url,
+        score: item.score,
+        verdict: item.verdict as 'clean' | 'suspicious' | 'dangerous',
+        safe: item.safe,
+        reasons: item.reasons || [],
+        timestamp: item.timestamp,
+        count: item.scan_count
+      }))
+
+      setHistory(formattedHistory)
+    } catch (error) {
+      console.error('Error loading history:', error)
+      toast({
+        title: "Error",
+        description: "Failed to load history",
+        variant: "destructive"
+      })
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDeleteItem = (url: string) => {
-    const updated = history.filter(item => item.url !== url)
-    localStorage.setItem('iurl-safe-history', JSON.stringify(updated))
-    setHistory(updated)
+  const clearHistory = async () => {
+    if (!confirm('Are you sure you want to clear all history?')) return
+
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { error } = await supabase
+        .from('scan_history')
+        .delete()
+        .eq('user_id', session.user.id)
+
+      if (error) throw error
+
+      setHistory([])
+      toast({
+        title: "Success",
+        description: "History cleared successfully"
+      })
+    } catch (error) {
+      console.error('Error clearing history:', error)
+      toast({
+        title: "Error",
+        description: "Failed to clear history",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDeleteItem = async (url: string) => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      if (!session) return
+
+      const { error } = await supabase
+        .from('scan_history')
+        .delete()
+        .eq('user_id', session.user.id)
+        .eq('url', url)
+
+      if (error) throw error
+
+      setHistory(prev => prev.filter(item => item.url !== url))
+      toast({
+        title: "Success",
+        description: "Item deleted successfully"
+      })
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
@@ -47,7 +133,13 @@ export default function History() {
           )}
         </div>
 
-        {history.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="text-muted-foreground">Loading...</p>
+            </CardContent>
+          </Card>
+        ) : history.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
@@ -66,9 +158,9 @@ export default function History() {
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center space-x-2 mb-2">
                         <Shield className={`h-4 w-4 ${
-                          item.verdict === 'clean' ? 'text-green-500' : 
-                          item.verdict === 'suspicious' ? 'text-yellow-500' : 
-                          'text-red-500'
+                          item.verdict === 'clean' ? 'text-primary' : 
+                          item.verdict === 'suspicious' ? 'text-warning' : 
+                          'text-destructive'
                         }`} />
                         <Badge variant={
                           item.verdict === 'clean' ? 'secondary' : 

@@ -2,6 +2,7 @@ import { useState, useCallback } from "react"
 import { useToast } from "@/hooks/use-toast"
 import { calculateScore } from "@/lib/url-scanner/scoring"
 import { ScanResult } from "@/lib/url-scanner/types"
+import { supabase } from "@/integrations/supabase/client"
 
 export type { ScanResult }
 
@@ -18,37 +19,77 @@ export function useUrlScanner() {
     // Calculate threat score
     const result = calculateScore(url)
     
-    // Update daily stats
-    const today = new Date().toDateString()
-    const stats = JSON.parse(localStorage.getItem('iurl-daily-stats') || '{}')
-    
-    if (!stats[today]) {
-      stats[today] = { linksChecked: 0, threatsBlocked: 0 }
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      
+      if (session) {
+        // Update daily stats
+        const today = new Date().toISOString().split('T')[0]
+        
+        const { data: existingStats } = await supabase
+          .from('daily_stats')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('date', today)
+          .single()
+
+        if (existingStats) {
+          await supabase
+            .from('daily_stats')
+            .update({
+              links_checked: existingStats.links_checked + 1,
+              threats_blocked: existingStats.threats_blocked + (result.safe ? 0 : 1)
+            })
+            .eq('id', existingStats.id)
+        } else {
+          await supabase
+            .from('daily_stats')
+            .insert({
+              user_id: session.user.id,
+              date: today,
+              links_checked: 1,
+              threats_blocked: result.safe ? 0 : 1
+            })
+        }
+
+        // Save to history
+        const { data: existing } = await supabase
+          .from('scan_history')
+          .select('*')
+          .eq('user_id', session.user.id)
+          .eq('url', result.url)
+          .single()
+
+        if (existing) {
+          await supabase
+            .from('scan_history')
+            .update({
+              score: result.score,
+              verdict: result.verdict,
+              safe: result.safe,
+              reasons: result.reasons,
+              timestamp: new Date().toISOString(),
+              scan_count: existing.scan_count + 1
+            })
+            .eq('id', existing.id)
+        } else {
+          await supabase
+            .from('scan_history')
+            .insert({
+              user_id: session.user.id,
+              url: result.url,
+              score: result.score,
+              verdict: result.verdict,
+              safe: result.safe,
+              reasons: result.reasons,
+              timestamp: new Date().toISOString(),
+              scan_count: 1
+            })
+        }
+      }
+    } catch (error) {
+      console.error('Error saving scan data:', error)
     }
-    
-    stats[today].linksChecked++
-    if (!result.safe) {
-      stats[today].threatsBlocked++
-    }
-    
-    localStorage.setItem('iurl-daily-stats', JSON.stringify(stats))
-    
-    // Save to history
-    const history = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
-    const existingIndex = history.findIndex((item: ScanResult & { count?: number }) => item.url === result.url)
-    
-    if (existingIndex >= 0) {
-      history[existingIndex].count = (history[existingIndex].count || 1) + 1
-      history[existingIndex].timestamp = result.timestamp
-      history[existingIndex].score = result.score
-      history[existingIndex].verdict = result.verdict
-      const updatedItem = history.splice(existingIndex, 1)[0]
-      history.unshift(updatedItem)
-    } else {
-      history.unshift({ ...result, count: 1 })
-    }
-    
-    localStorage.setItem('iurl-safe-history', JSON.stringify(history.slice(0, 50)))
     
     // Show toast notification
     let title: string
