@@ -41,11 +41,21 @@ export default function History() {
       const formattedHistory: HistoryItem[] = (data || []).map(item => ({
         url: item.url,
         score: item.score,
-        verdict: item.verdict as 'clean' | 'suspicious' | 'dangerous',
+        verdict: item.verdict as 'clean' | 'suspicious' | 'malicious',
         safe: item.safe,
         reasons: item.reasons || [],
-        timestamp: item.timestamp,
-        count: item.scan_count
+        timestamp: new Date(item.timestamp).getTime(),
+        count: item.scan_count,
+        factors: {
+          allowlist: 0,
+          threatFeed: 0,
+          domainSimilarity: 0,
+          certificate: 0,
+          redirects: 0,
+          entropy: 0,
+          behavior: 0,
+          c2: 0
+        }
       }))
 
       setHistory(formattedHistory)
