@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { Resend } from "npm:resend@2.0.0"
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
 
@@ -7,6 +8,24 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Validation schema
+const emailSchema = z.object({
+  to: z.string()
+    .email({ message: 'Invalid email format' })
+    .max(255, { message: 'Email must be less than 255 characters' }),
+  type: z.enum(['activated', 'expiring', 'cancelled'], {
+    errorMap: () => ({ message: 'Type must be activated, expiring, or cancelled' })
+  }),
+  subscriptionDetails: z.object({
+    planName: z.string()
+      .min(1, { message: 'Plan name is required' })
+      .max(50, { message: 'Plan name must be less than 50 characters' }),
+    amount: z.number()
+      .positive({ message: 'Amount must be positive' }),
+    endDate: z.string().optional()
+  })
+})
 
 interface EmailRequest {
   to: string
@@ -86,14 +105,25 @@ serve(async (req) => {
   }
 
   try {
-    const { to, type, subscriptionDetails }: EmailRequest = await req.json()
+    const body = await req.json()
 
-    if (!to || !type || !subscriptionDetails) {
+    // Validate input
+    const validationResult = emailSchema.safeParse(body)
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.format())
       return new Response(
-        JSON.stringify({ error: 'Missing required fields' }),
+        JSON.stringify({ 
+          error: 'Invalid input data',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const { to, type, subscriptionDetails } = validationResult.data
 
     const { subject, html } = getEmailContent(type, subscriptionDetails)
 
