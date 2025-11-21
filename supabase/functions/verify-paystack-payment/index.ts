@@ -1,10 +1,19 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Validation schema for payment reference
+const verifySchema = z.object({
+  reference: z.string()
+    .min(1, { message: 'Reference is required' })
+    .max(100, { message: 'Reference too long' })
+    .regex(/^[a-zA-Z0-9_-]+$/, { message: 'Invalid reference format' })
+})
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,14 +22,25 @@ serve(async (req) => {
   }
 
   try {
-    const { reference } = await req.json()
+    const body = await req.json()
 
-    if (!reference) {
+    // Validate input
+    const validationResult = verifySchema.safeParse(body)
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.format())
       return new Response(
-        JSON.stringify({ error: 'Payment reference is required' }),
+        JSON.stringify({ 
+          error: 'Invalid input data',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const { reference } = validationResult.data
 
     console.log('Verifying payment with reference:', reference)
 
