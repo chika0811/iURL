@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { ScanResult } from "@/hooks/use-url-scanner"
+import { supabase } from "@/integrations/supabase/client"
+import { useToast } from "@/hooks/use-toast"
 
 interface HistoryItem extends ScanResult {
   count?: number
@@ -13,23 +15,128 @@ interface HistoryItem extends ScanResult {
 
 export default function History() {
   const [history, setHistory] = useState<HistoryItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const { toast } = useToast()
 
   useEffect(() => {
-    const savedHistory = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
-    setHistory(savedHistory)
+    loadHistory()
   }, [])
 
-  const clearHistory = () => {
-    if (confirm('Are you sure you want to clear all history?')) {
-      localStorage.removeItem('iurl-safe-history')
-      setHistory([])
+  const loadHistory = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Load from database for authenticated users
+        const { data, error } = await supabase
+          .from('scan_history')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('updated_at', { ascending: false })
+          .limit(50)
+        
+        if (error) throw error
+        
+        // Transform database records to match HistoryItem interface
+        const historyItems: HistoryItem[] = (data || []).map(item => ({
+          url: item.url,
+          score: item.score,
+          verdict: item.verdict as 'clean' | 'suspicious' | 'malicious',
+          safe: item.safe,
+          reasons: item.reasons || [],
+          timestamp: new Date(item.timestamp).getTime(),
+          count: item.scan_count,
+          factors: {
+            allowlist: 0,
+            threatFeed: 0,
+            domainSimilarity: 0,
+            certificate: 0,
+            redirects: 0,
+            entropy: 0,
+            behavior: 0,
+            c2: 0
+          }
+        }))
+        
+        setHistory(historyItems)
+      } else {
+        // Load from localStorage for guest users
+        const savedHistory = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
+        setHistory(savedHistory)
+      }
+    } catch (error) {
+      console.error('Error loading history:', error)
+      // Fallback to localStorage
+      const savedHistory = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
+      setHistory(savedHistory)
+    } finally {
+      setLoading(false)
     }
   }
 
-  const handleDeleteItem = (url: string) => {
-    const updated = history.filter(item => item.url !== url)
-    localStorage.setItem('iurl-safe-history', JSON.stringify(updated))
-    setHistory(updated)
+  const clearHistory = async () => {
+    if (!confirm('Are you sure you want to clear all history?')) return
+    
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Delete from database
+        const { error } = await supabase
+          .from('scan_history')
+          .delete()
+          .eq('user_id', user.id)
+        
+        if (error) throw error
+        
+        toast({
+          title: "History Cleared",
+          description: "All scan history has been removed"
+        })
+      } else {
+        // Clear localStorage for guest users
+        localStorage.removeItem('iurl-safe-history')
+      }
+      
+      setHistory([])
+    } catch (error) {
+      console.error('Error clearing history:', error)
+      toast({
+        title: "Error",
+        description: "Failed to clear history",
+        variant: "destructive"
+      })
+    }
+  }
+
+  const handleDeleteItem = async (url: string) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser()
+      
+      if (user) {
+        // Delete from database
+        const { error } = await supabase
+          .from('scan_history')
+          .delete()
+          .eq('user_id', user.id)
+          .eq('url', url)
+        
+        if (error) throw error
+      } else {
+        // Remove from localStorage for guest users
+        const updated = history.filter(item => item.url !== url)
+        localStorage.setItem('iurl-safe-history', JSON.stringify(updated))
+      }
+      
+      setHistory(prev => prev.filter(item => item.url !== url))
+    } catch (error) {
+      console.error('Error deleting item:', error)
+      toast({
+        title: "Error",
+        description: "Failed to delete item",
+        variant: "destructive"
+      })
+    }
   }
 
   return (
@@ -47,7 +154,14 @@ export default function History() {
           )}
         </div>
 
-        {history.length === 0 ? (
+        {loading ? (
+          <Card>
+            <CardContent className="py-12 text-center">
+              <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
+              <p className="text-sm text-muted-foreground">Loading history...</p>
+            </CardContent>
+          </Card>
+        ) : history.length === 0 ? (
           <Card>
             <CardContent className="py-12 text-center">
               <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4" />

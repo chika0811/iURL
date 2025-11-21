@@ -1,1 +1,17 @@
 project_id = "mywbdbgjzfrsqdyqdqul"
+
+# Rate limiting configuration for edge functions
+[functions.initialize-paystack-payment]
+verify_jwt = true
+
+[functions.verify-paystack-payment]
+verify_jwt = true
+
+[functions.send-subscription-email]
+verify_jwt = true
+
+[functions.handle-paystack-webhook]
+verify_jwt = false
+
+[functions.cancel-subscription]
+verify_jwt = true
