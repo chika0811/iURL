@@ -1,10 +1,27 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 }
+
+// Validation schema
+const paymentSchema = z.object({
+  planName: z.enum(['Pro', 'Premium'], { 
+    errorMap: () => ({ message: 'Plan name must be either Pro or Premium' })
+  }),
+  amount: z.number()
+    .positive({ message: 'Amount must be positive' })
+    .max(1000000, { message: 'Amount exceeds maximum allowed value' }),
+  email: z.string()
+    .email({ message: 'Invalid email format' })
+    .max(255, { message: 'Email must be less than 255 characters' }),
+  currency: z.enum(['NGN', 'USD', 'GHS', 'KES', 'ZAR'], { 
+    errorMap: () => ({ message: 'Invalid currency code' })
+  }).optional().default('NGN')
+})
 
 serve(async (req) => {
   // Handle CORS preflight requests
@@ -13,14 +30,25 @@ serve(async (req) => {
   }
 
   try {
-    const { planName, amount, email, currency } = await req.json()
+    const body = await req.json()
 
-    if (!planName || !amount || !email) {
+    // Validate input
+    const validationResult = paymentSchema.safeParse(body)
+    if (!validationResult.success) {
+      console.error('Validation error:', validationResult.error.format())
       return new Response(
-        JSON.stringify({ error: 'Plan name, amount, and email are required' }),
+        JSON.stringify({ 
+          error: 'Invalid input data',
+          details: validationResult.error.errors.map(e => ({
+            field: e.path.join('.'),
+            message: e.message
+          }))
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       )
     }
+
+    const { planName, amount, email, currency } = validationResult.data
 
     console.log('Initializing payment for:', { planName, amount, email, currency })
 
