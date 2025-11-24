@@ -68,6 +68,39 @@ export type Database = {
         }
         Relationships: []
       }
+      login_activity: {
+        Row: {
+          created_at: string
+          id: string
+          ip_address: string | null
+          login_method: string | null
+          login_timestamp: string
+          success: boolean
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          login_method?: string | null
+          login_timestamp?: string
+          success?: boolean
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          login_method?: string | null
+          login_timestamp?: string
+          success?: boolean
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       payments: {
         Row: {
           amount: number

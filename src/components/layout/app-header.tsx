@@ -1,7 +1,7 @@
 import { ThemeToggle } from "@/components/theme-toggle"
 import iurlLogo from "@/assets/iurl-logo.png"
 import { Button } from "@/components/ui/button"
-import { CreditCard } from "lucide-react"
+import { CreditCard, Shield } from "lucide-react"
 import { useNavigate } from "react-router-dom"
 import { supabase } from "@/integrations/supabase/client"
 import { useEffect, useState } from "react"
@@ -27,14 +27,24 @@ export function AppHeader() {
       </div>
       <div className="absolute right-4 flex items-center gap-2">
         {user && (
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => navigate("/subscription")}
-          >
-            <CreditCard className="mr-2 h-4 w-4" />
-            Subscription
-          </Button>
+          <>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/security")}
+            >
+              <Shield className="mr-2 h-4 w-4" />
+              Security
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => navigate("/subscription")}
+            >
+              <CreditCard className="mr-2 h-4 w-4" />
+              Subscription
+            </Button>
+          </>
         )}
         <ThemeToggle />
       </div>
