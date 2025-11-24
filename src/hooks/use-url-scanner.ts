@@ -16,8 +16,8 @@ export function useUrlScanner() {
     // Simulate scanning delay for UX
     await new Promise(resolve => setTimeout(resolve, 1500))
     
-    // Calculate threat score
-    const result = calculateScore(url)
+    // Calculate threat score with AI analysis
+    const result = await calculateScore(url)
     
     // Update daily stats
     const today = new Date().toDateString()
