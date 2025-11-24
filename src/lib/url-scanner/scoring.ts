@@ -9,8 +9,22 @@ import {
   detectBehavior,
   detectC2Links
 } from './detectors'
+import { supabase } from '@/integrations/supabase/client'
 
-export function calculateScore(url: string): ScanResult {
+async function getAIAnalysis(url: string): Promise<{ riskScore: number; reason: string; threats: string[] }> {
+  try {
+    const { data, error } = await supabase.functions.invoke('analyze-url-ai', {
+      body: { url }
+    });
+    
+    if (error) throw error;
+    return data || { riskScore: 0, reason: '', threats: [] };
+  } catch {
+    return { riskScore: 0, reason: '', threats: [] };
+  }
+}
+
+export async function calculateScore(url: string): Promise<ScanResult> {
   // Step 1: Check allowlist first for immediate safety confirmation
   if (isInAllowlist(url)) {
     return {
@@ -33,7 +47,9 @@ export function calculateScore(url: string): ScanResult {
     }
   }
 
-  // Step 2: Run all detectors to gather risk factors
+  // Step 2: Run all detectors to gather risk factors (including AI analysis)
+  const aiAnalysis = await getAIAnalysis(url);
+  
   const factors: ScanFactors = {
     allowlist: 0,
     threatFeed: detectThreatFeed(url),
@@ -59,7 +75,10 @@ export function calculateScore(url: string): ScanResult {
   const totalContribution = Object.values(contributions).reduce((sum, val) => sum + val, 0)
   const totalWeight = Object.values(WEIGHTS).reduce((sum, val) => sum + val, 0) - WEIGHTS.allowlist
 
-  const dangerScore = Math.min(100, (totalContribution / totalWeight) * 100)
+  let dangerScore = Math.min(100, (totalContribution / totalWeight) * 100)
+  
+  // Blend AI analysis with detector score (60% detectors, 40% AI)
+  dangerScore = (dangerScore * 0.6) + (aiAnalysis.riskScore * 0.4)
 
   // Step 4: Invert the danger score to get a "safety score"
   const safetyScore = 100 - dangerScore
@@ -75,7 +94,7 @@ export function calculateScore(url: string): ScanResult {
   }
 
   // Step 6: Generate human-readable reasons for the score
-  const reasons = generateReasons(factors, contributions, verdict)
+  const reasons = generateReasons(factors, contributions, verdict, aiAnalysis)
 
   return {
     url,
@@ -91,13 +110,23 @@ export function calculateScore(url: string): ScanResult {
 function generateReasons(
   factors: ScanFactors,
   contributions: Record<string, number>,
-  verdict: 'clean' | 'suspicious' | 'malicious'
+  verdict: 'clean' | 'suspicious' | 'malicious',
+  aiAnalysis: { riskScore: number; reason: string; threats: string[] }
 ): string[] {
   const reasons: string[] = []
 
   if (verdict === 'clean') {
     reasons.push('This link appears to be safe.')
+    if (aiAnalysis.reason) reasons.push(`AI: ${aiAnalysis.reason}`)
     return reasons
+  }
+  
+  // Add AI insights first if available
+  if (aiAnalysis.reason && aiAnalysis.riskScore > 30) {
+    reasons.push(`AI: ${aiAnalysis.reason}`)
+  }
+  if (aiAnalysis.threats.length > 0) {
+    aiAnalysis.threats.slice(0, 2).forEach(threat => reasons.push(`⚠️ ${threat}`))
   }
 
   if (contributions.threatFeed > 5) {
