@@ -61,13 +61,11 @@ export function useBackgroundService() {
     if ('serviceWorker' in navigator) {
       try {
         // Register service worker for background tasks
-        const registration = await navigator.serviceWorker.register('/sw.js')
-        console.log('Service Worker registered:', registration)
+        await navigator.serviceWorker.register('/sw.js')
         
         // Set up periodic background sync if available
         if ('sync' in window.ServiceWorkerRegistration.prototype) {
           // Background sync will be handled by service worker
-          console.log('Background sync available')
         }
       } catch (error) {
         console.error('Service Worker registration failed:', error)
@@ -91,8 +89,6 @@ export function useBackgroundService() {
           const isNewUrl = !savedUrls.includes(clipboardText.trim())
           
           if (isNewUrl) {
-            console.log('URL detected in clipboard:', clipboardText.trim())
-            
             // Auto-paste URL to input field
             window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
               detail: { url: clipboardText.trim() }
@@ -120,8 +116,6 @@ export function useBackgroundService() {
             const isNewUrl = !savedUrls.includes(clipboardText.trim())
             
             if (isNewUrl) {
-              console.log('URL detected in clipboard:', clipboardText.trim())
-              
               // Auto-paste URL to input field
               window.dispatchEvent(new CustomEvent('clipboardUrlDetected', {
                 detail: { url: clipboardText.trim() }
@@ -143,9 +137,7 @@ export function useBackgroundService() {
     } catch (error) {
       // Clipboard access might be restricted, fail silently in web version
       // This is normal behavior for web browsers when document is not focused
-      if (!window.Capacitor?.isNativePlatform()) {
-        console.log('Clipboard monitoring requires document focus (browser security)')
-      } else {
+      if (window.Capacitor?.isNativePlatform()) {
         console.error('Clipboard monitoring error:', error)
       }
     }
