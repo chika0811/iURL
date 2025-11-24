@@ -73,12 +73,28 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const { error } = await supabase.auth.signInWithPassword({
+      const { data, error } = await supabase.auth.signInWithPassword({
         email,
         password,
       });
 
       if (error) throw error;
+
+      // Track login activity
+      if (data.user) {
+        try {
+          await supabase.functions.invoke('track-login-activity', {
+            body: {
+              user_id: data.user.id,
+              login_method: 'email/password',
+              success: true,
+            },
+          });
+        } catch (trackError) {
+          console.error('Error tracking login:', trackError);
+          // Don't block login if tracking fails
+        }
+      }
 
       toast({
         title: "Welcome back!",
