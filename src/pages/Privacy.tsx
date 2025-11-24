@@ -10,7 +10,7 @@ export default function Privacy() {
   }
 
   const handleEmail = () => {
-    window.open('mailto:chikajoel01@gmail.com')
+    window.open('mailto:dnovitcorporation@gmail.com')
   }
 
   return (
@@ -154,7 +154,7 @@ export default function Privacy() {
               <Mail className="h-5 w-5 text-muted-foreground" />
               <div>
                 <p className="font-medium">Email</p>
-                <p className="text-sm text-muted-foreground">chikajoel01@gmail.com</p>
+                <p className="text-sm text-muted-foreground">dnovitcorporation@gmail.com</p>
               </div>
             </div>
             
