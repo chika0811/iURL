@@ -109,38 +109,32 @@ export function LinkStatusPopup({
 
         {!isScanning && result && (
           <div className="space-y-2">
-            <div className="flex space-x-3">
-              {result.verdict === 'clean' ? (
-                <>
-                  <Button onClick={onOpenLink} className="flex-1">
-                    Open Link
+            {result.verdict === 'clean' ? (
+              <div className="flex space-x-3">
+                <Button onClick={onOpenLink} className="flex-1">
+                  Open Link
+                </Button>
+                <Button onClick={onClose} variant="outline" className="flex-1">
+                  Close
+                </Button>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Button onClick={onClose} className="w-full">
+                  Close
+                </Button>
+                {onAddToAllowlist && (
+                  <Button 
+                    onClick={onAddToAllowlist} 
+                    variant="ghost" 
+                    size="sm" 
+                    className="w-full"
+                  >
+                    <Shield className="mr-2 h-4 w-4" />
+                    Trust this domain
                   </Button>
-                  <Button onClick={onClose} variant="outline" className="flex-1">
-                    Close
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button onClick={onClose} className="flex-1">
-                    Close
-                  </Button>
-                  <Button onClick={onOpenLink} variant="outline" className="flex-1">
-                    Open Anyway
-                  </Button>
-                </>
-              )}
-            </div>
-            
-            {result.verdict !== 'clean' && onAddToAllowlist && (
-              <Button 
-                onClick={onAddToAllowlist} 
-                variant="ghost" 
-                size="sm" 
-                className="w-full"
-              >
-                <Shield className="mr-2 h-4 w-4" />
-                Trust this domain
-              </Button>
+                )}
+              </div>
             )}
           </div>
         )}
