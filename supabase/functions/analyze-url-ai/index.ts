@@ -20,24 +20,25 @@ serve(async (req) => {
       );
     }
 
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
-    if (!GEMINI_API_KEY) {
-      throw new Error('GEMINI_API_KEY not configured');
+    const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
+    if (!LOVABLE_API_KEY) {
+      throw new Error('LOVABLE_API_KEY not configured');
     }
 
-    // Call Gemini AI to analyze the URL
-    // Using gemini-1.5-flash for better stability and performance
+    // Call Lovable AI to analyze the URL
     const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
       {
         method: 'POST',
         headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          contents: [{
-            parts: [{
-              text: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
+          model: 'google/gemini-2.5-flash',
+          messages: [{
+            role: 'user',
+            content: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
 
 URL: ${url}
 
@@ -47,22 +48,21 @@ Respond ONLY in this JSON format:
   "reason": "<brief explanation>",
   "threats": ["<threat1>", "<threat2>"]
 }`
-            }]
           }],
-          generationConfig: {
-            temperature: 0.2,
-            maxOutputTokens: 200
-          }
+          temperature: 0.2,
+          max_tokens: 200
         })
       }
     );
 
     if (!response.ok) {
-      throw new Error('AI analysis failed');
+      const errorText = await response.text();
+      console.error('Lovable AI error:', response.status, errorText);
+      throw new Error(`AI analysis failed: ${response.status}`);
     }
 
     const data = await response.json();
-    const aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    const aiText = data.choices?.[0]?.message?.content || '{}';
     
     // Parse AI response
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
