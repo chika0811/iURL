@@ -17,6 +17,7 @@ import { useScanLimit } from "@/hooks/use-scan-limit"
 import { addToAllowlist } from "@/lib/url-scanner/allowlist"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
+import { supabase } from "@/integrations/supabase/client"
 
 export default function Home() {
   const [url, setUrl] = useState("")
@@ -26,12 +27,31 @@ export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [showQrScanner, setShowQrScanner] = useState(false)
   const [showAllowlist, setShowAllowlist] = useState(false)
+  const [hasPremiumPlan, setHasPremiumPlan] = useState(false)
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
   const { startBackgroundProtection, stopBackgroundProtection } = useBackgroundService()
   const { scanLimit, incrementScanCount } = useScanLimit()
   const { toast } = useToast()
   const navigate = useNavigate()
+
+  useEffect(() => {
+    // Check if user has premium subscription
+    const checkSubscription = async () => {
+      const { data: { user } } = await supabase.auth.getUser()
+      if (user) {
+        const { data: subscription } = await supabase
+          .from('subscriptions')
+          .select('plan_type, status')
+          .eq('user_id', user.id)
+          .eq('status', 'active')
+          .maybeSingle()
+        
+        setHasPremiumPlan(subscription?.plan_type === 'pro' || subscription?.plan_type === 'premium')
+      }
+    }
+    checkSubscription()
+  }, [])
 
   useEffect(() => {
     // Listen for URL scan requests from notifications
@@ -290,7 +310,7 @@ export default function Home() {
         isScanning={isScanning}
         onOpenLink={handleOpenLink}
         onClose={handleClosePopup}
-        onAddToAllowlist={handleAddToAllowlist}
+        onAddToAllowlist={hasPremiumPlan ? handleAddToAllowlist : undefined}
       />
 
       {showQrScanner && (
