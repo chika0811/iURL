@@ -55,6 +55,7 @@ export function useScanLimit() {
       }
 
       const scanCount = usage?.scan_count || 0
+      // Free users get 10 scans/month, Premium and Business get unlimited
       const maxScans = planType === 'free' ? 10 : Infinity
 
       setScanLimit({
