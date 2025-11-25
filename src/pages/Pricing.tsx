@@ -227,40 +227,42 @@ export default function Pricing() {
     {
       name: "Free",
       price: "$0",
-      period: "forever",
+      period: "month",
       features: [
-        "Manual URL scanning",
-        "QR code scanning",
-        "Basic threat detection",
-        "Scan history",
-        "Local processing"
+        "Up to 10 links per month",
+        "Manual URL paste only",
+        "Daily counters (links checked & threats stopped)",
+        "7 days history retention",
+        "Basic threat detection"
       ]
     },
     {
-      name: "Pro",
-      price: "$4.99",
-      period: "per month",
+      name: "Premium",
+      monthlyPrice: "$4.99",
+      yearlyPrice: "$49.99",
+      period: "month",
       features: [
         "Everything in Free",
-        "Automatic clipboard monitoring",
-        "Advanced threat detection",
-        "Priority scanning",
-        "Custom allowlist",
-        "Email support"
+        "Unlimited URL scans",
+        "Background checking with global access",
+        "Auto-opens safe URLs in default browser",
+        "Unlimited history retention",
+        "Priority support"
       ],
       popular: true
     },
     {
-      name: "Premium",
-      price: "$9.99",
-      period: "per month",
+      name: "Business",
+      price: "$99.99",
+      period: "year",
       features: [
-        "Everything in Pro",
-        "Real-time protection",
-        "Enterprise-grade security",
-        "VPN integration",
-        "24/7 priority support",
-        "Custom integrations"
+        "Everything in Premium",
+        "Custom AI model training",
+        "Add unrecognized links to AI whitelist",
+        "White-label SDK integration",
+        "Device/per-seat pricing",
+        "Advanced security controls",
+        "Dedicated account manager"
       ]
     }
   ]
@@ -277,57 +279,77 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-4xl mx-auto">
-          {plans.filter(plan => plan.name !== "Free").map((plan) => (
-            <Card 
-              key={plan.name}
-              className="flex flex-col transition-all hover:border-primary hover:shadow-lg"
-            >
-              <CardHeader>
-                <CardTitle className="text-2xl">{plan.name}</CardTitle>
-                <CardDescription>
-                  <div className="space-y-1">
-                    <div>
-                      <span className="text-3xl font-bold text-foreground">{plan.price}</span>
-                      <span className="text-muted-foreground"> USD/{plan.period}</span>
-                    </div>
-                    {userCountry !== 'US' && (
-                      <div className="text-sm">
-                        <span className="text-foreground font-semibold">
-                          {localCurrency.symbol}{(parseFloat(plan.price.replace('$', '')) * localCurrency.rate).toFixed(2)}
-                        </span>
-                        <span className="text-muted-foreground"> {localCurrency.code}/{plan.period}</span>
-                      </div>
-                    )}
+        <div className="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+          {plans.map((plan) => {
+            const isPremium = plan.name === "Premium";
+            const isFree = plan.name === "Free";
+            const displayPrice = isPremium ? plan.monthlyPrice : plan.price;
+            
+            return (
+              <Card 
+                key={plan.name}
+                className={`flex flex-col transition-all ${
+                  plan.popular 
+                    ? 'border-primary shadow-lg hover:shadow-xl relative' 
+                    : 'hover:border-primary hover:shadow-lg'
+                }`}
+              >
+                {plan.popular && (
+                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-4 py-1 rounded-full">
+                    MOST POPULAR
                   </div>
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="flex-1 flex flex-col">
-                <ul className="space-y-3 mb-6 flex-1">
-                  {plan.features.map((feature) => (
-                    <li key={feature} className="flex items-start gap-2">
-                      <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                      <span className="text-sm">{feature}</span>
-                    </li>
-                  ))}
-                </ul>
-                <Button
-                  className="w-full" 
-                  variant="default"
-                  onClick={() => handleSubscribe(plan.name, plan.price)}
-                  disabled={loading === plan.name || currencyLoading}
-                >
-                  {loading === plan.name 
-                    ? "Processing..." 
-                    : currencyLoading
-                    ? "Loading..."
-                    : plan.name === "Free" 
-                    ? "Get Started" 
-                    : "Subscribe Now"}
-                </Button>
-              </CardContent>
-            </Card>
-          ))}
+                )}
+                <CardHeader>
+                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                  <CardDescription>
+                    <div className="space-y-1">
+                      <div>
+                        <span className="text-3xl font-bold text-foreground">{displayPrice}</span>
+                        <span className="text-muted-foreground"> USD/{plan.period}</span>
+                      </div>
+                      {isPremium && (
+                        <div className="text-sm text-muted-foreground">
+                          or {plan.yearlyPrice} USD/year
+                        </div>
+                      )}
+                      {userCountry !== 'US' && !isFree && (
+                        <div className="text-sm">
+                          <span className="text-foreground font-semibold">
+                            {localCurrency.symbol}{(parseFloat(displayPrice!.replace('$', '')) * localCurrency.rate).toFixed(2)}
+                          </span>
+                          <span className="text-muted-foreground"> {localCurrency.code}/{plan.period}</span>
+                        </div>
+                      )}
+                    </div>
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="flex-1 flex flex-col">
+                  <ul className="space-y-3 mb-6 flex-1">
+                    {plan.features.map((feature) => (
+                      <li key={feature} className="flex items-start gap-2">
+                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+                        <span className="text-sm">{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <Button
+                    className="w-full" 
+                    variant={plan.popular ? "default" : "outline"}
+                    onClick={() => handleSubscribe(plan.name, displayPrice!)}
+                    disabled={loading === plan.name || currencyLoading || isFree}
+                  >
+                    {loading === plan.name 
+                      ? "Processing..." 
+                      : currencyLoading
+                      ? "Loading..."
+                      : isFree 
+                      ? "Current Plan" 
+                      : "Subscribe Now"}
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          })}
         </div>
       </main>
 
