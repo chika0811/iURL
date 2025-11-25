@@ -58,7 +58,7 @@ export default function Login() {
           navigate("/home");
         }
       }, 1000);
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: "Sign up failed",
         description: error.message,
@@ -102,7 +102,7 @@ export default function Login() {
       });
       
       navigate("/home");
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: "Sign in failed",
         description: error.message,

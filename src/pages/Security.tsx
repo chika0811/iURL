@@ -72,7 +72,7 @@ export default function Security() {
       setCurrentPassword("");
       setNewPassword("");
       setConfirmPassword("");
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         variant: "destructive",
         title: "Error updating password",

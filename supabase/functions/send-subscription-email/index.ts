@@ -37,7 +37,7 @@ interface EmailRequest {
   }
 }
 
-const getEmailContent = (type: string, details: any) => {
+const getEmailContent = (type: string, details: { planName: string; amount: number; endDate?: string }) => {
   switch (type) {
     case 'activated':
       return {

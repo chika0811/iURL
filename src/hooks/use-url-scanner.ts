@@ -95,7 +95,6 @@ export function useUrlScanner() {
         localStorage.setItem('iurl-safe-history', JSON.stringify(history.slice(0, 50)))
       }
     } catch (error) {
-      console.error('Error saving to database, using localStorage:', error)
       // Fallback to localStorage on error
       const history = JSON.parse(localStorage.getItem('iurl-safe-history') || '[]')
       const existingIndex = history.findIndex((item: ScanResult & { count?: number }) => item.url === result.url)

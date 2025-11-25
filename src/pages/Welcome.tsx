@@ -7,7 +7,7 @@ export default function Welcome() {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/login")
+      navigate("/home")
     }, 3000)
 
     return () => clearTimeout(timer)

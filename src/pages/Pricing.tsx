@@ -11,7 +11,9 @@ import { useNavigate } from "react-router-dom"
 // Declare Paystack type
 declare global {
   interface Window {
-    PaystackPop: any;
+    PaystackPop: {
+      setup: (options: any) => { openIframe: () => void }; // eslint-disable-line @typescript-eslint/no-explicit-any
+    };
   }
 }
 
@@ -28,7 +30,7 @@ export default function Pricing() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
-  const [user, setUser] = useState<any>(null)
+  const [user, setUser] = useState<unknown | null>(null)
   const [userCountry, setUserCountry] = useState<string>('NG')
   const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['NG'])
   const [currencyLoading, setCurrencyLoading] = useState(true)
@@ -144,11 +146,11 @@ export default function Pricing() {
         try {
           const handler = window.PaystackPop.setup({
             key: data.public_key,
-            email: user.email,
+            email: (user as { email: string }).email,
             amount: data.amount, // Amount already in kobo/cents from backend
             currency: localCurrency.code,
             ref: data.reference,
-            callback: async (response: any) => {
+            callback: async (response: { reference: string }) => {
               console.log('Payment completed:', response.reference)
               
               // Get fresh session token for verification
@@ -211,7 +213,7 @@ export default function Pricing() {
         // Fallback to redirect if Paystack SDK not loaded
         window.location.href = data.authorization_url
       }
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Payment initialization error:', error)
       toast({
         title: "Payment failed",

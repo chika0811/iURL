@@ -42,8 +42,8 @@ export default function Home() {
 
     // Listen for clipboard URL detection
     const handleClipboardUrlDetected = (event: CustomEvent) => {
-      console.log('Clipboard URL detected event:', event.detail.url)
       setUrl(event.detail.url)
+      handleScanUrl(event.detail.url)
     }
 
     window.addEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
@@ -86,8 +86,13 @@ export default function Home() {
     }
   }
 
-  const handleScanUrl = async () => {
-    if (!url.trim()) return
+  const handleScanUrl = async (input?: string | React.MouseEvent) => {
+    let targetUrl = url
+    if (typeof input === 'string') {
+      targetUrl = input
+    }
+
+    if (!targetUrl.trim()) return
     
     // Check scan limit for free users
     if (scanLimit && !scanLimit.canScan) {
@@ -103,7 +108,7 @@ export default function Home() {
     setScanResult(null)
     
     try {
-      const result = await scanUrl(url.trim())
+      const result = await scanUrl(targetUrl.trim())
       setScanResult(result)
       
       // Increment scan count after successful scan
@@ -139,9 +144,7 @@ export default function Home() {
     setUrl(scannedUrl)
     setShowQrScanner(false)
     // Auto-scan the detected URL
-    setTimeout(() => {
-      handleScanUrl()
-    }, 500)
+    handleScanUrl(scannedUrl)
   }
 
   const handleCloseQrScanner = () => {

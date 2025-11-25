@@ -19,13 +19,6 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
   const codeReaderRef = useRef<BrowserMultiFormatReader | null>(null)
   const { toast } = useToast()
 
-  useEffect(() => {
-    startCamera()
-    return () => {
-      stopCamera()
-    }
-  }, [])
-
   const startCamera = async () => {
     try {
       setIsScanning(true)
@@ -162,6 +155,13 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
     setHasPermission(false)
     setIsScanning(false)
   }
+
+  useEffect(() => {
+    startCamera()
+    return () => {
+      stopCamera()
+    }
+  }, [])
 
   const handleClose = () => {
     stopCamera()
