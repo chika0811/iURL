@@ -79,7 +79,7 @@ export default function SubscriptionDashboard() {
 
       if (paymentError) throw paymentError;
       setPayments(paymentData || []);
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: "Error",
         description: error.message,
@@ -109,7 +109,7 @@ export default function SubscriptionDashboard() {
       });
 
       fetchSubscriptionData();
-    } catch (error: any) {
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       toast({
         title: "Error",
         description: error.message,
