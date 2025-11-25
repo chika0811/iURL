@@ -30,7 +30,7 @@ export default function Pricing() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
-  const [user, setUser] = useState<unknown | null>(null)
+  const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
   const [userCountry, setUserCountry] = useState<string>('NG')
   const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['NG'])
   const [currencyLoading, setCurrencyLoading] = useState(true)
@@ -146,7 +146,7 @@ export default function Pricing() {
         try {
           const handler = window.PaystackPop.setup({
             key: data.public_key,
-            email: (user as { email: string }).email,
+            email: user.email,
             amount: data.amount, // Amount already in kobo/cents from backend
             currency: localCurrency.code,
             ref: data.reference,
