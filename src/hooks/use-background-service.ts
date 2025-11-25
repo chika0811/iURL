@@ -1,9 +1,11 @@
 import { useEffect, useCallback } from 'react'
 import { LocalNotifications } from '@capacitor/local-notifications'
 import { useToast } from '@/hooks/use-toast'
+import { useSubscriptionPlan } from '@/hooks/use-subscription-plan'
 
 export function useBackgroundService() {
   const { toast } = useToast()
+  const { hasBackgroundAccess, isLoading: planLoading } = useSubscriptionPlan()
 
   // Initialize background monitoring
   const initializeBackgroundService = useCallback(async () => {
@@ -203,13 +205,31 @@ export function useBackgroundService() {
 
   // Start background protection
   const startBackgroundProtection = useCallback(async () => {
+    // Check if user has premium or business plan for background access
+    if (planLoading) {
+      toast({
+        title: "Loading...",
+        description: "Checking your subscription plan"
+      })
+      return
+    }
+
+    if (!hasBackgroundAccess) {
+      toast({
+        title: "Premium Feature",
+        description: "Background protection requires a Premium or Business plan. Upgrade to enable this feature.",
+        variant: "destructive"
+      })
+      return
+    }
+
     await initializeBackgroundService()
     
     // Set up real-time clipboard monitoring
     const cleanup = setupClipboardListener()
     
     return cleanup
-  }, [initializeBackgroundService, setupClipboardListener])
+  }, [initializeBackgroundService, setupClipboardListener, hasBackgroundAccess, planLoading, toast])
 
   // Stop background protection
   const stopBackgroundProtection = useCallback(async () => {

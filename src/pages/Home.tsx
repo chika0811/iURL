@@ -14,6 +14,7 @@ import { useUrlScanner, ScanResult } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 import { useBackgroundService } from "@/hooks/use-background-service"
 import { useScanLimit } from "@/hooks/use-scan-limit"
+import { useSubscriptionPlan } from "@/hooks/use-subscription-plan"
 import { addToAllowlist } from "@/lib/url-scanner/allowlist"
 import { useToast } from "@/hooks/use-toast"
 import { useNavigate } from "react-router-dom"
@@ -27,31 +28,13 @@ export default function Home() {
   const [scanResult, setScanResult] = useState<ScanResult | null>(null)
   const [showQrScanner, setShowQrScanner] = useState(false)
   const [showAllowlist, setShowAllowlist] = useState(false)
-  const [hasPremiumPlan, setHasPremiumPlan] = useState(false)
   const { scanUrl, isScanning } = useUrlScanner()
   const stats = useDailyStats()
   const { startBackgroundProtection, stopBackgroundProtection } = useBackgroundService()
   const { scanLimit, incrementScanCount } = useScanLimit()
+  const { hasBackgroundAccess, isPremiumOrBusiness } = useSubscriptionPlan()
   const { toast } = useToast()
   const navigate = useNavigate()
-
-  useEffect(() => {
-    // Check if user has premium subscription
-    const checkSubscription = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      if (user) {
-        const { data: subscription } = await supabase
-          .from('subscriptions')
-          .select('plan_type, status')
-          .eq('user_id', user.id)
-          .eq('status', 'active')
-          .maybeSingle()
-        
-        setHasPremiumPlan(subscription?.plan_type === 'premium' || subscription?.plan_type === 'business')
-      }
-    }
-    checkSubscription()
-  }, [])
 
   useEffect(() => {
     // Listen for URL scan requests from notifications
@@ -75,11 +58,13 @@ export default function Home() {
     }
   }, [])
 
-  // Auto-start clipboard monitoring when component mounts (always active)
+  // Auto-start clipboard monitoring for premium/business users only
   useEffect(() => {
     const initClipboardMonitoring = async () => {
-      const cleanup = await startBackgroundProtection()
-      setCleanupClipboard(() => cleanup)
+      if (hasBackgroundAccess) {
+        const cleanup = await startBackgroundProtection()
+        setCleanupClipboard(() => cleanup)
+      }
     }
     
     initClipboardMonitoring()
@@ -89,7 +74,7 @@ export default function Home() {
         cleanupClipboard()
       }
     }
-  }, [startBackgroundProtection])
+  }, [startBackgroundProtection, hasBackgroundAccess])
 
   const handleToggleProtection = async () => {
     if (isProtectionActive) {
@@ -310,7 +295,7 @@ export default function Home() {
         isScanning={isScanning}
         onOpenLink={handleOpenLink}
         onClose={handleClosePopup}
-        onAddToAllowlist={hasPremiumPlan ? handleAddToAllowlist : undefined}
+        onAddToAllowlist={isPremiumOrBusiness ? handleAddToAllowlist : undefined}
       />
 
       {showQrScanner && (

@@ -141,76 +141,69 @@ export default function Pricing() {
 
       if (error) throw error
 
-      // Use Paystack Inline instead of redirect
+      // Use Paystack Inline checkout
       if (window.PaystackPop && data.public_key) {
-        try {
-          const handler = window.PaystackPop.setup({
-            key: data.public_key,
-            email: user.email,
-            amount: data.amount, // Amount already in kobo/cents from backend
-            currency: localCurrency.code,
-            ref: data.reference,
-            callback: async (response: { reference: string }) => {
-              console.log('Payment completed:', response.reference)
-              
-              // Get fresh session token for verification
-              const { data: { session: currentSession } } = await supabase.auth.getSession()
-              if (!currentSession) {
-                toast({
-                  title: "Authentication error",
-                  description: "Please log in again",
-                })
-                setLoading(null)
-                return
-              }
-
-              // Verify payment with backend
-              const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
-                'verify-paystack-payment',
-                {
-                  body: { reference: response.reference },
-                  headers: {
-                    Authorization: `Bearer ${currentSession.access_token}`,
-                  },
-                }
-              )
-
-              if (verifyError || !verifyData?.success) {
-                console.error('Verification error:', verifyError)
-                toast({
-                  title: "Verification failed",
-                  description: verifyError?.message || "Please contact support",
-                })
-              } else {
-                toast({
-                  title: "Success!",
-                  description: "Your subscription is now active.",
-                })
-                setTimeout(() => navigate('/subscription-dashboard'), 1500)
-              }
-              setLoading(null)
-            },
-            onClose: () => {
-              setLoading(null)
+        const handler = window.PaystackPop.setup({
+          key: data.public_key,
+          email: user.email,
+          amount: data.amount, // Amount already in kobo/cents from backend
+          currency: localCurrency.code,
+          ref: data.reference,
+          callback: async (response: { reference: string }) => {
+            console.log('Payment completed:', response.reference)
+            
+            // Get fresh session token for verification
+            const { data: { session: currentSession } } = await supabase.auth.getSession()
+            if (!currentSession) {
               toast({
-                title: "Payment cancelled",
-                description: "You closed the payment window.",
+                title: "Authentication error",
+                description: "Please log in again",
               })
+              setLoading(null)
+              return
             }
-          })
-          handler.openIframe()
-        } catch (popupError) {
-          console.error('Paystack popup error:', popupError)
-          toast({
-            title: "Error",
-            description: "Failed to open payment window. Redirecting...",
-          })
-          setTimeout(() => {
-            window.location.href = data.authorization_url
-          }, 2000)
-        }
+
+            // Verify payment with backend
+            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+              'verify-paystack-payment',
+              {
+                body: { reference: response.reference },
+                headers: {
+                  Authorization: `Bearer ${currentSession.access_token}`,
+                },
+              }
+            )
+
+            if (verifyError || !verifyData?.success) {
+              console.error('Verification error:', verifyError)
+              toast({
+                title: "Verification failed",
+                description: verifyError?.message || "Please contact support",
+              })
+            } else {
+              toast({
+                title: "Success!",
+                description: "Your subscription is now active.",
+              })
+              setTimeout(() => navigate('/subscription-dashboard'), 1500)
+            }
+            setLoading(null)
+          },
+          onClose: () => {
+            setLoading(null)
+            toast({
+              title: "Payment cancelled",
+              description: "You closed the payment window.",
+            })
+          }
+        })
+        handler.openIframe()
       } else {
         // Fallback to redirect if Paystack SDK not loaded
+        toast({
+          title: "Loading payment...",
+          description: "Redirecting to secure checkout",
+        })
         window.location.href = data.authorization_url
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
@@ -333,8 +326,8 @@ export default function Pricing() {
                     ))}
                   </ul>
                   <Button
-                    className="w-full" 
-                    variant={plan.popular ? "default" : "outline"}
+                    className="w-full transition-all hover:scale-105" 
+                    variant={isFree ? "outline" : "default"}
                     onClick={() => handleSubscribe(plan.name, displayPrice!)}
                     disabled={loading === plan.name || currencyLoading || isFree}
                   >
