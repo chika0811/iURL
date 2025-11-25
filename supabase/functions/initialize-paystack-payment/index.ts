@@ -9,8 +9,8 @@ const corsHeaders = {
 
 // Validation schema
 const paymentSchema = z.object({
-  planName: z.enum(['Pro', 'Premium'], { 
-    errorMap: () => ({ message: 'Plan name must be either Pro or Premium' })
+  planName: z.enum(['Premium', 'Business'], { 
+    errorMap: () => ({ message: 'Plan name must be either Premium or Business' })
   }),
   amount: z.number()
     .positive({ message: 'Amount must be positive' })

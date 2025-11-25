@@ -47,7 +47,7 @@ export default function Home() {
           .eq('status', 'active')
           .maybeSingle()
         
-        setHasPremiumPlan(subscription?.plan_type === 'pro' || subscription?.plan_type === 'premium')
+        setHasPremiumPlan(subscription?.plan_type === 'premium' || subscription?.plan_type === 'business')
       }
     }
     checkSubscription()
