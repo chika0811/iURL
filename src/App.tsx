@@ -11,7 +11,7 @@ import Privacy from "./pages/Privacy";
 import Pricing from "./pages/Pricing";
 import Login from "./pages/Login";
 import Security from "./pages/Security";
-import SubscriptionDashboard from "./pages/SubscriptionDashboard";
+import Subscription from "./pages/Subscription";
 import PaymentStatus from "./pages/PaymentStatus";
 import NotFound from "./pages/NotFound";
 
@@ -33,7 +33,7 @@ const App = () => (
             <Route path="/pricing" element={<Pricing />} />
             <Route path="/login" element={<Login />} />
             <Route path="/security" element={<Security />} />
-            <Route path="/subscription" element={<SubscriptionDashboard />} />
+            <Route path="/subscription" element={<Subscription />} />
             <Route path="/payment-status" element={<PaymentStatus />} />
             {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
             <Route path="*" element={<NotFound />} />

@@ -130,7 +130,10 @@ serve(async (req) => {
 
     if (insertError) {
       console.error('Error creating pending subscription:', insertError)
-      // Continue anyway, as we can still verify later
+      return new Response(
+        JSON.stringify({ error: 'Could not create a pending subscription', details: insertError }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      )
     }
 
     return new Response(
