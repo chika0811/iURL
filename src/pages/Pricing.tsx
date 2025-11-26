@@ -52,6 +52,15 @@ export default function Pricing() {
       return
     }
 
+    // Ensure user has an email before proceeding
+    if (!user.email) {
+      toast({
+        title: "Email address required",
+        description: "Please add an email to your account before subscribing.",
+      })
+      return
+    }
+
     if (planName === "Free") {
       toast({
         title: "Free plan",
