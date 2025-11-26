@@ -17,23 +17,11 @@ declare global {
   }
 }
 
-// Currency conversion rates (approximate, should be fetched from API in production)
-const CURRENCY_RATES: Record<string, { symbol: string; rate: number; code: string }> = {
-  'NG': { symbol: '₦', rate: 1650, code: 'NGN' },
-  'GH': { symbol: '₵', rate: 15.5, code: 'GHS' },
-  'KE': { symbol: 'KSh', rate: 160, code: 'KES' },
-  'ZA': { symbol: 'R', rate: 19, code: 'ZAR' },
-  'US': { symbol: '$', rate: 1, code: 'USD' },
-}
-
 export default function Pricing() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
-  const [userCountry, setUserCountry] = useState<string>('NG')
-  const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['NG'])
-  const [currencyLoading, setCurrencyLoading] = useState(true)
 
   useEffect(() => {
     // Load Paystack SDK
@@ -41,23 +29,6 @@ export default function Pricing() {
     script.src = 'https://js.paystack.co/v1/inline.js'
     script.async = true
     document.body.appendChild(script)
-
-    // Detect user's country (using a simple IP geolocation in production)
-    // Defaulting to Nigeria for Paystack compatibility
-    fetch('https://ipapi.co/json/')
-      .then(res => res.json())
-      .then(data => {
-        const country = data.country_code || 'NG'
-        setUserCountry(country)
-        setLocalCurrency(CURRENCY_RATES[country] || CURRENCY_RATES['NG'])
-      })
-      .catch(() => {
-        setUserCountry('NG')
-        setLocalCurrency(CURRENCY_RATES['NG'])
-      })
-      .finally(() => {
-        setCurrencyLoading(false)
-      })
 
     return () => {
       document.body.removeChild(script)
@@ -78,14 +49,6 @@ export default function Pricing() {
         description: "Please log in to subscribe",
       })
       navigate('/login')
-      return
-    }
-
-    if (currencyLoading) {
-      toast({
-        title: "Please wait",
-        description: "Detecting your currency...",
-      })
       return
     }
 
@@ -118,8 +81,6 @@ export default function Pricing() {
 
     try {
       const usdAmount = parseFloat(price.replace('$', ''))
-      // Convert USD to local currency
-      const localAmount = usdAmount * localCurrency.rate
       
       const { data: { session } } = await supabase.auth.getSession()
 
@@ -130,8 +91,8 @@ export default function Pricing() {
       const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
         body: {
           planName,
-          amount: localAmount, // Send amount in local currency
-          currency: localCurrency.code,
+          amount: usdAmount,
+          currency: "USD",
           email: user.email,
         },
         headers: {
@@ -147,7 +108,7 @@ export default function Pricing() {
           key: data.public_key,
           email: user.email,
           amount: data.amount, // Amount already in kobo/cents from backend
-          currency: localCurrency.code,
+          currency: "USD",
           ref: data.reference,
           callback: async (response: { reference: string }) => {
             console.log('Payment completed:', response.reference)
@@ -185,7 +146,7 @@ export default function Pricing() {
                 title: "Success!",
                 description: "Your subscription is now active.",
               })
-              setTimeout(() => navigate('/subscription-dashboard'), 1500)
+              setTimeout(() => navigate('/subscription'), 1500)
             }
             setLoading(null)
           },
@@ -305,14 +266,6 @@ export default function Pricing() {
                           or {plan.yearlyPrice} USD/year
                         </div>
                       )}
-                      {userCountry !== 'US' && !isFree && (
-                        <div className="text-sm">
-                          <span className="text-foreground font-semibold">
-                            {localCurrency.symbol}{(parseFloat(displayPrice!.replace('$', '')) * localCurrency.rate).toFixed(2)}
-                          </span>
-                          <span className="text-muted-foreground"> {localCurrency.code}/{plan.period}</span>
-                        </div>
-                      )}
                     </div>
                   </CardDescription>
                 </CardHeader>
@@ -329,12 +282,10 @@ export default function Pricing() {
                     className="w-full transition-all hover:scale-105" 
                     variant={isFree ? "outline" : "default"}
                     onClick={() => handleSubscribe(plan.name, displayPrice!)}
-                    disabled={loading === plan.name || currencyLoading || isFree}
+                    disabled={loading === plan.name || isFree}
                   >
                     {loading === plan.name 
                       ? "Processing..." 
-                      : currencyLoading
-                      ? "Loading..."
                       : isFree 
                       ? "Current Plan" 
                       : "Subscribe Now"}
