@@ -18,9 +18,9 @@ const paymentSchema = z.object({
   email: z.string()
     .email({ message: 'Invalid email format' })
     .max(255, { message: 'Email must be less than 255 characters' }),
-  currency: z.enum(['NGN', 'USD', 'GHS', 'KES', 'ZAR'], { 
+  currency: z.enum(['NGN', 'USD', 'GHS', 'KES', 'ZAR'], {
     errorMap: () => ({ message: 'Invalid currency code' })
-  }).optional().default('NGN')
+  })
 })
 
 serve(async (req) => {
@@ -96,12 +96,12 @@ serve(async (req) => {
       },
       body: JSON.stringify({
         email: email,
-        amount: Math.round(amount * 100), // Convert to kobo (amount is already in local currency)
-        currency: currency || 'NGN',
+        amount: Math.round(amount * 100), // Convert to kobo/cents
+        currency: currency,
         metadata: {
           plan_name: planName,
           user_id: user.id,
-          original_currency: currency || 'NGN',
+          original_currency: currency,
         },
         callback_url: `${req.headers.get('origin')}/payment-status`,
       }),

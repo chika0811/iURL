@@ -52,6 +52,15 @@ export default function Pricing() {
       return
     }
 
+    // Ensure user has an email before proceeding
+    if (!user.email) {
+      toast({
+        title: "Email address required",
+        description: "Please add an email to your account before subscribing.",
+      })
+      return
+    }
+
     if (planName === "Free") {
       toast({
         title: "Free plan",
@@ -169,9 +178,13 @@ export default function Pricing() {
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Payment initialization error:', error)
+      // Provide a more detailed error message to the user
+      const description =
+        error.details || error.message || "An unexpected error occurred. Please try again."
       toast({
-        title: "Payment failed",
-        description: error.message || "Unable to initialize payment",
+        title: "Payment Failed",
+        description: `Error: ${description}`,
+        variant: "destructive",
       })
       setLoading(null)
     }
