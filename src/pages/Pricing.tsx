@@ -42,7 +42,7 @@ export default function Pricing() {
     })
   }, [])
 
-  const handleSubscribe = async (planName: string, price: string) => {
+  const handleSubscribe = async (planName: string, price: number) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -89,8 +89,6 @@ export default function Pricing() {
     setLoading(planName)
 
     try {
-      const usdAmount = parseFloat(price.replace('$', ''))
-      
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -100,8 +98,8 @@ export default function Pricing() {
       const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
         body: {
           planName,
-          amount: usdAmount,
-          currency: "USD",
+          amount: price,
+          currency: "NGN",
           email: user.email,
         },
         headers: {
@@ -116,8 +114,8 @@ export default function Pricing() {
         const handler = window.PaystackPop.setup({
           key: data.public_key,
           email: user.email,
-          amount: data.amount, // Amount already in kobo/cents from backend
-          currency: "USD",
+          amount: data.amount, // Amount already in kobo from backend
+          currency: "NGN",
           ref: data.reference,
           callback: async (response: { reference: string }) => {
             console.log('Payment completed:', response.reference)
@@ -193,7 +191,8 @@ export default function Pricing() {
   const plans = [
     {
       name: "Free",
-      price: "$0",
+      price: "₦0",
+      numericPrice: 0,
       period: "month",
       features: [
         "Up to 10 links per month",
@@ -205,8 +204,10 @@ export default function Pricing() {
     },
     {
       name: "Premium",
-      monthlyPrice: "$4.99",
-      yearlyPrice: "$49.99",
+      monthlyPrice: "₦7,500",
+      yearlyPrice: "₦75,000",
+      numericMonthlyPrice: 7500,
+      numericYearlyPrice: 75000,
       period: "month",
       features: [
         "Everything in Free",
@@ -220,7 +221,8 @@ export default function Pricing() {
     },
     {
       name: "Business",
-      price: "$99.99",
+      price: "₦150,000",
+      numericPrice: 150000,
       period: "year",
       features: [
         "Everything in Premium",
@@ -251,6 +253,7 @@ export default function Pricing() {
             const isPremium = plan.name === "Premium";
             const isFree = plan.name === "Free";
             const displayPrice = isPremium ? plan.monthlyPrice : plan.price;
+            const numericPrice = isPremium ? plan.numericMonthlyPrice : plan.numericPrice;
             
             return (
               <Card 
@@ -272,11 +275,11 @@ export default function Pricing() {
                     <div className="space-y-1">
                       <div>
                         <span className="text-3xl font-bold text-foreground">{displayPrice}</span>
-                        <span className="text-muted-foreground"> USD/{plan.period}</span>
+                        <span className="text-muted-foreground"> NGN/{plan.period}</span>
                       </div>
                       {isPremium && (
                         <div className="text-sm text-muted-foreground">
-                          or {plan.yearlyPrice} USD/year
+                          or {plan.yearlyPrice} NGN/year
                         </div>
                       )}
                     </div>
@@ -294,7 +297,7 @@ export default function Pricing() {
                   <Button
                     className="w-full transition-all hover:scale-105" 
                     variant={isFree ? "outline" : "default"}
-                    onClick={() => handleSubscribe(plan.name, displayPrice!)}
+                    onClick={() => handleSubscribe(plan.name, numericPrice!)}
                     disabled={loading === plan.name || isFree}
                   >
                     {loading === plan.name 
