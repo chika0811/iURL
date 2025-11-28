@@ -17,11 +17,23 @@ declare global {
   }
 }
 
+// Currency conversion rates (approximate, should be fetched from API in production)
+const CURRENCY_RATES: Record<string, { symbol: string; rate: number; code: string }> = {
+  'NG': { symbol: '₦', rate: 1650, code: 'NGN' },
+  'GH': { symbol: '₵', rate: 15.5, code: 'GHS' },
+  'KE': { symbol: 'KSh', rate: 160, code: 'KES' },
+  'ZA': { symbol: 'R', rate: 19, code: 'ZAR' },
+  'US': { symbol: '$', rate: 1, code: 'USD' },
+}
+
 export default function Pricing() {
   const { toast } = useToast()
   const navigate = useNavigate()
   const [loading, setLoading] = useState<string | null>(null)
   const [user, setUser] = useState<{ id: string; email?: string } | null>(null)
+  const [userCountry, setUserCountry] = useState<string>('NG')
+  const [localCurrency, setLocalCurrency] = useState(CURRENCY_RATES['NG'])
+  const [currencyLoading, setCurrencyLoading] = useState(true)
 
   useEffect(() => {
     // Load Paystack SDK
@@ -29,6 +41,23 @@ export default function Pricing() {
     script.src = 'https://js.paystack.co/v1/inline.js'
     script.async = true
     document.body.appendChild(script)
+
+    // Detect user's country (using a simple IP geolocation in production)
+    // Defaulting to Nigeria for Paystack compatibility
+    fetch('https://ipapi.co/json/')
+      .then(res => res.json())
+      .then(data => {
+        const country = data.country_code || 'NG'
+        setUserCountry(country)
+        setLocalCurrency(CURRENCY_RATES[country] || CURRENCY_RATES['NG'])
+      })
+      .catch(() => {
+        setUserCountry('NG')
+        setLocalCurrency(CURRENCY_RATES['NG'])
+      })
+      .finally(() => {
+        setCurrencyLoading(false)
+      })
 
     return () => {
       document.body.removeChild(script)
@@ -42,7 +71,7 @@ export default function Pricing() {
     })
   }, [])
 
-  const handleSubscribe = async (planName: string, price: number) => {
+  const handleSubscribe = async (planName: string, price: string) => {
     if (!user) {
       toast({
         title: "Authentication required",
@@ -52,11 +81,10 @@ export default function Pricing() {
       return
     }
 
-    // Ensure user has an email before proceeding
-    if (!user.email) {
+    if (currencyLoading) {
       toast({
-        title: "Email address required",
-        description: "Please add an email to your account before subscribing.",
+        title: "Please wait",
+        description: "Detecting your currency...",
       })
       return
     }
@@ -89,6 +117,10 @@ export default function Pricing() {
     setLoading(planName)
 
     try {
+      const usdAmount = parseFloat(price.replace('$', ''))
+      // Convert USD to local currency
+      const localAmount = usdAmount * localCurrency.rate
+      
       const { data: { session } } = await supabase.auth.getSession()
 
       if (!session) {
@@ -98,8 +130,8 @@ export default function Pricing() {
       const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
         body: {
           planName,
-          amount: price,
-          currency: "NGN",
+          amount: localAmount, // Send amount in local currency
+          currency: localCurrency.code,
           email: user.email,
         },
         headers: {
@@ -114,8 +146,8 @@ export default function Pricing() {
         const handler = window.PaystackPop.setup({
           key: data.public_key,
           email: user.email,
-          amount: data.amount, // Amount already in kobo from backend
-          currency: "NGN",
+          amount: data.amount, // Amount already in kobo/cents from backend
+          currency: localCurrency.code,
           ref: data.reference,
           callback: async (response: { reference: string }) => {
             console.log('Payment completed:', response.reference)
@@ -176,13 +208,9 @@ export default function Pricing() {
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
       console.error('Payment initialization error:', error)
-      // Provide a more detailed error message to the user
-      const description =
-        error.details || error.message || "An unexpected error occurred. Please try again."
       toast({
-        title: "Payment Failed",
-        description: `Error: ${description}`,
-        variant: "destructive",
+        title: "Payment failed",
+        description: error.message || "Unable to initialize payment",
       })
       setLoading(null)
     }
@@ -191,8 +219,7 @@ export default function Pricing() {
   const plans = [
     {
       name: "Free",
-      price: "₦0",
-      numericPrice: 0,
+      price: "$0",
       period: "month",
       features: [
         "Up to 10 links per month",
@@ -204,10 +231,8 @@ export default function Pricing() {
     },
     {
       name: "Premium",
-      monthlyPrice: "₦7,500",
-      yearlyPrice: "₦75,000",
-      numericMonthlyPrice: 7500,
-      numericYearlyPrice: 75000,
+      monthlyPrice: "$4.99",
+      yearlyPrice: "$49.99",
       period: "month",
       features: [
         "Everything in Free",
@@ -221,8 +246,7 @@ export default function Pricing() {
     },
     {
       name: "Business",
-      price: "₦150,000",
-      numericPrice: 150000,
+      price: "$99.99",
       period: "year",
       features: [
         "Everything in Premium",
@@ -253,7 +277,6 @@ export default function Pricing() {
             const isPremium = plan.name === "Premium";
             const isFree = plan.name === "Free";
             const displayPrice = isPremium ? plan.monthlyPrice : plan.price;
-            const numericPrice = isPremium ? plan.numericMonthlyPrice : plan.numericPrice;
             
             return (
               <Card 
@@ -275,11 +298,19 @@ export default function Pricing() {
                     <div className="space-y-1">
                       <div>
                         <span className="text-3xl font-bold text-foreground">{displayPrice}</span>
-                        <span className="text-muted-foreground"> NGN/{plan.period}</span>
+                        <span className="text-muted-foreground"> USD/{plan.period}</span>
                       </div>
                       {isPremium && (
                         <div className="text-sm text-muted-foreground">
-                          or {plan.yearlyPrice} NGN/year
+                          or {plan.yearlyPrice} USD/year
+                        </div>
+                      )}
+                      {userCountry !== 'US' && !isFree && (
+                        <div className="text-sm">
+                          <span className="text-foreground font-semibold">
+                            {localCurrency.symbol}{(parseFloat(displayPrice!.replace('$', '')) * localCurrency.rate).toFixed(2)}
+                          </span>
+                          <span className="text-muted-foreground"> {localCurrency.code}/{plan.period}</span>
                         </div>
                       )}
                     </div>
@@ -297,11 +328,13 @@ export default function Pricing() {
                   <Button
                     className="w-full transition-all hover:scale-105" 
                     variant={isFree ? "outline" : "default"}
-                    onClick={() => handleSubscribe(plan.name, numericPrice!)}
-                    disabled={loading === plan.name || isFree}
+                    onClick={() => handleSubscribe(plan.name, displayPrice!)}
+                    disabled={loading === plan.name || currencyLoading || isFree}
                   >
                     {loading === plan.name 
                       ? "Processing..." 
+                      : currencyLoading
+                      ? "Loading..."
                       : isFree 
                       ? "Current Plan" 
                       : "Subscribe Now"}
