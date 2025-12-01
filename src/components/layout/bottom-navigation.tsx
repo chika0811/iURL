@@ -28,24 +28,29 @@ const navigation = [
 export function BottomNavigation() {
   const location = useLocation()
 
+  // Filter out Home button when on home page
+  const visibleNavigation = navigation.filter(
+    (item) => !(item.href === "/home" && location.pathname === "/home")
+  )
+
   return (
-    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border">
+    <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
       <div className="flex items-center justify-around py-2 px-2 max-w-lg mx-auto">
-        {navigation.map((item) => {
+        {visibleNavigation.map((item) => {
           const isActive = location.pathname === item.href
           return (
             <Link
               key={item.name}
               to={item.href}
               className={cn(
-                "flex flex-col items-center p-2 rounded-xl transition-colors min-w-0",
+                "flex flex-col items-center p-2 rounded-xl transition-colors min-w-[60px] flex-1 max-w-[100px]",
                 isActive
                   ? "bg-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground"
               )}
             >
               <item.icon className="h-5 w-5 mb-1" />
-              <span className="text-[10px] font-medium">{item.name}</span>
+              <span className="text-[10px] font-medium truncate w-full text-center">{item.name}</span>
             </Link>
           )
         })}

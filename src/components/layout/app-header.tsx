@@ -18,32 +18,34 @@ export function AppHeader() {
   }, [])
 
   return (
-    <header className="flex items-center justify-center p-4 bg-background border-b border-border relative">
-      <div className="flex items-center space-x-3">
-        <img src={iurlLogo} alt="iURL Logo" className="h-10 w-10" />
+    <header className="flex items-center justify-center p-3 md:p-4 bg-background border-b border-border relative">
+      <div className="flex items-center space-x-2 md:space-x-3">
+        <img src={iurlLogo} alt="iURL Logo" className="h-8 w-8 md:h-10 md:w-10" />
         <div>
-          <h1 className="text-xl font-bold">iURL</h1>
-          <p className="text-sm text-muted-foreground">Smart Link Protection</p>
+          <h1 className="text-lg md:text-xl font-bold">iURL</h1>
+          <p className="text-xs md:text-sm text-muted-foreground hidden sm:block">Smart Link Protection</p>
         </div>
       </div>
-      <div className="absolute right-4 flex items-center gap-2">
+      <div className="absolute right-2 md:right-4 flex items-center gap-1 md:gap-2">
         {user && (
           <>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigate("/security")}
+              className="hidden sm:flex"
             >
-              <Shield className="mr-2 h-4 w-4" />
-              Security
+              <Shield className="mr-0 sm:mr-2 h-4 w-4" />
+              <span className="hidden md:inline">Security</span>
             </Button>
             <Button 
               variant="outline" 
               size="sm"
               onClick={() => navigate("/subscription")}
+              className="hidden sm:flex"
             >
-              <CreditCard className="mr-2 h-4 w-4" />
-              Subscription
+              <CreditCard className="mr-0 sm:mr-2 h-4 w-4" />
+              <span className="hidden md:inline">Subscription</span>
             </Button>
           </>
         )}
