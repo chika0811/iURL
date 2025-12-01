@@ -121,7 +121,6 @@ export default function Home() {
         await incrementScanCount()
       }
     } catch (error) {
-      console.error("Error scanning URL:", error)
       setShowPopup(false)
     }
   }
