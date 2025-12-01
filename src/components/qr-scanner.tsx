@@ -147,8 +147,8 @@ export function QrScanner({ onResult, onClose }: QrScannerProps) {
       try {
         // Stop any ongoing decode operations
         codeReaderRef.current = null
-      } catch (error) {
-        console.log('Error stopping code reader:', error)
+      } catch {
+        // Silent cleanup error
       }
     }
     
