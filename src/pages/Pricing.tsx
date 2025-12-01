@@ -71,16 +71,55 @@ export default function Pricing() {
     })
   }, [])
 
-  const handleSubscribe = async (planName: string, price: string) => {
-    if (!user) {
-      toast({
-        title: "Authentication required",
-        description: "Please log in to subscribe",
-      })
-      navigate('/login')
-      return
-    }
+  const handlePaymentCallback = async (reference: string) => {
+    try {
+      // Get fresh session token for verification
+      const { data: { session: currentSession } } = await supabase.auth.getSession()
+      if (!currentSession) {
+        toast({
+          title: "Authentication error",
+          description: "Please log in again",
+        })
+        setLoading(null)
+        return
+      }
 
+      // Verify payment with backend
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
+        'verify-paystack-payment',
+        {
+          body: { reference },
+          headers: {
+            Authorization: `Bearer ${currentSession.access_token}`,
+          },
+        }
+      )
+
+      if (verifyError || !verifyData?.success) {
+        console.error('Verification error:', verifyError)
+        toast({
+          title: "Verification failed",
+          description: verifyError?.message || "Please contact support",
+        })
+      } else {
+        toast({
+          title: "Success!",
+          description: "Your subscription is now active.",
+        })
+        setTimeout(() => navigate('/subscription-dashboard'), 1500)
+      }
+    } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+      console.error('Payment verification error:', error)
+      toast({
+        title: "Verification failed",
+        description: "Please try again or contact support",
+      })
+    } finally {
+      setLoading(null)
+    }
+  }
+
+  const handleSubscribe = async (planName: string, price: string) => {
     if (currencyLoading) {
       toast({
         title: "Please wait",
@@ -97,6 +136,16 @@ export default function Pricing() {
       return
     }
 
+    // Check authentication only when subscribing
+    if (!user) {
+      toast({
+        title: "Authentication required",
+        description: "Please log in to subscribe",
+      })
+      navigate('/login')
+      return
+    }
+
     // Check for active subscription
     const { data: existingSub } = await supabase
       .from("subscriptions")
@@ -110,7 +159,7 @@ export default function Pricing() {
         title: "Active subscription",
         description: "You already have an active subscription. Visit your dashboard to manage it.",
       })
-      navigate("/subscription")
+      navigate("/subscription-dashboard")
       return
     }
 
@@ -118,7 +167,6 @@ export default function Pricing() {
 
     try {
       const usdAmount = parseFloat(price.replace('$', ''))
-      // Convert USD to local currency
       const localAmount = usdAmount * localCurrency.rate
       
       const { data: { session } } = await supabase.auth.getSession()
@@ -130,7 +178,7 @@ export default function Pricing() {
       const { data, error } = await supabase.functions.invoke('initialize-paystack-payment', {
         body: {
           planName,
-          amount: localAmount, // Send amount in local currency
+          amount: localAmount,
           currency: localCurrency.code,
           email: user.email,
         },
@@ -146,50 +194,13 @@ export default function Pricing() {
         const handler = window.PaystackPop.setup({
           key: data.public_key,
           email: user.email,
-          amount: data.amount, // Amount already in kobo/cents from backend
+          amount: data.amount,
           currency: localCurrency.code,
           ref: data.reference,
-          callback: async (response: { reference: string }) => {
-            console.log('Payment completed:', response.reference)
-            
-            // Get fresh session token for verification
-            const { data: { session: currentSession } } = await supabase.auth.getSession()
-            if (!currentSession) {
-              toast({
-                title: "Authentication error",
-                description: "Please log in again",
-              })
-              setLoading(null)
-              return
-            }
-
-            // Verify payment with backend
-            const { data: verifyData, error: verifyError } = await supabase.functions.invoke(
-              'verify-paystack-payment',
-              {
-                body: { reference: response.reference },
-                headers: {
-                  Authorization: `Bearer ${currentSession.access_token}`,
-                },
-              }
-            )
-
-            if (verifyError || !verifyData?.success) {
-              console.error('Verification error:', verifyError)
-              toast({
-                title: "Verification failed",
-                description: verifyError?.message || "Please contact support",
-              })
-            } else {
-              toast({
-                title: "Success!",
-                description: "Your subscription is now active.",
-              })
-              setTimeout(() => navigate('/subscription-dashboard'), 1500)
-            }
-            setLoading(null)
+          callback: function(response: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
+            handlePaymentCallback(response.reference)
           },
-          onClose: () => {
+          onClose: function() {
             setLoading(null)
             toast({
               title: "Payment cancelled",
@@ -199,11 +210,6 @@ export default function Pricing() {
         })
         handler.openIframe()
       } else {
-        // Fallback to redirect if Paystack SDK not loaded
-        toast({
-          title: "Loading payment...",
-          description: "Redirecting to secure checkout",
-        })
         window.location.href = data.authorization_url
       }
     } catch (error: any) { // eslint-disable-line @typescript-eslint/no-explicit-any
