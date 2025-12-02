@@ -267,18 +267,18 @@ export default function Pricing() {
   ]
 
   return (
-    <div className="min-h-screen bg-background pb-20 flex flex-col">
+    <div className="min-h-screen bg-background pb-16 flex flex-col">
       <AppHeader />
       
-      <main className="container mx-auto p-4 max-w-6xl flex-1 flex flex-col justify-center">
-        <div className="text-center mb-8">
-          <h1 className="text-3xl font-bold mb-2">Choose Your Plan</h1>
-          <p className="text-muted-foreground">
+      <main className="container mx-auto p-3 max-w-6xl flex-1 flex flex-col justify-center">
+        <div className="text-center mb-6">
+          <h1 className="text-2xl font-bold mb-1.5">Choose Your Plan</h1>
+          <p className="text-sm text-muted-foreground">
             Select the perfect plan for your security needs
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-6 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-3 gap-4 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const isPremium = plan.name === "Premium";
             const isFree = plan.name === "Free";
@@ -294,25 +294,25 @@ export default function Pricing() {
                 }`}
               >
                 {plan.popular && (
-                  <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-xs font-bold px-4 py-1 rounded-full">
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-0.5 rounded-full">
                     MOST POPULAR
                   </div>
                 )}
-                <CardHeader>
-                  <CardTitle className="text-2xl">{plan.name}</CardTitle>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>
-                    <div className="space-y-1">
+                    <div className="space-y-0.5">
                       <div>
-                        <span className="text-3xl font-bold text-foreground">{displayPrice}</span>
-                        <span className="text-muted-foreground"> USD/{plan.period}</span>
+                        <span className="text-2xl font-bold text-foreground">{displayPrice}</span>
+                        <span className="text-xs text-muted-foreground"> USD/{plan.period}</span>
                       </div>
                       {isPremium && (
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                           or {plan.yearlyPrice} USD/year
                         </div>
                       )}
                       {userCountry !== 'US' && !isFree && (
-                        <div className="text-sm">
+                        <div className="text-xs">
                           <span className="text-foreground font-semibold">
                             {localCurrency.symbol}{(parseFloat(displayPrice!.replace('$', '')) * localCurrency.rate).toFixed(2)}
                           </span>
@@ -322,17 +322,17 @@ export default function Pricing() {
                     </div>
                   </CardDescription>
                 </CardHeader>
-                <CardContent className="flex-1 flex flex-col">
-                  <ul className="space-y-3 mb-6 flex-1">
+                <CardContent className="flex-1 flex flex-col pt-0">
+                  <ul className="space-y-2 mb-4 flex-1">
                     {plan.features.map((feature) => (
-                      <li key={feature} className="flex items-start gap-2">
-                        <Check className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                        <span className="text-sm">{feature}</span>
+                      <li key={feature} className="flex items-start gap-1.5">
+                        <Check className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                        <span className="text-xs">{feature}</span>
                       </li>
                     ))}
                   </ul>
                   <Button
-                    className="w-full transition-all hover:scale-105" 
+                    className="w-full transition-all hover:scale-105 h-9 text-xs" 
                     variant={isFree ? "outline" : "default"}
                     onClick={() => handleSubscribe(plan.name, displayPrice!)}
                     disabled={loading === plan.name || currencyLoading || isFree}
