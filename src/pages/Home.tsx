@@ -177,67 +177,68 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 flex flex-col">
+    <div className="min-h-screen bg-background pb-16 flex flex-col">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto text-center flex-1 flex flex-col justify-center">
+      <div className="p-3 space-y-3 max-w-lg mx-auto text-center flex-1 flex flex-col justify-center">
         {/* Real-time Protection Section */}
         <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <div className="flex items-center space-x-3">
-                <Shield className="h-6 w-6 text-primary" />
-                <h2 className="text-lg font-semibold">Real-time Protection</h2>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center space-x-2">
+                <Shield className="h-5 w-5 text-primary" />
+                <h2 className="text-base font-semibold">Real-time Protection</h2>
               </div>
-              <div className="flex space-x-2">
+              <div className="flex space-x-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowAllowlist(true)}
+                  className="h-8 w-8"
                 >
-                  <Settings className="h-5 w-5" />
+                  <Settings className="h-4 w-4" />
                 </Button>
                 <Button
                   variant={isProtectionActive ? "default" : "outline"}
                   onClick={handleToggleProtection}
-                  className="px-6"
+                  className="px-4 h-8 text-sm"
                 >
                   {isProtectionActive ? "Active" : "Activate"}
                 </Button>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-2 gap-3 mb-3">
               <div className="text-center">
-                <div className="flex items-center justify-center space-x-1 mb-2">
-                  <TrendingUp className="h-4 w-4 text-primary" />
-                  <span className="text-sm text-muted-foreground">Today</span>
+                <div className="flex items-center justify-center space-x-1 mb-1">
+                  <TrendingUp className="h-3 w-3 text-primary" />
+                  <span className="text-xs text-muted-foreground">Today</span>
                 </div>
-                <div className="text-2xl font-bold">{stats.linksChecked}</div>
-                <div className="text-sm text-muted-foreground">Links Checked</div>
+                <div className="text-xl font-bold">{stats.linksChecked}</div>
+                <div className="text-xs text-muted-foreground">Links Checked</div>
               </div>
               
               <div className="text-center">
-                <div className="flex items-center justify-center space-x-1 mb-2">
-                  <ShieldX className="h-4 w-4 text-destructive" />
-                  <span className="text-sm text-muted-foreground">Blocked</span>
+                <div className="flex items-center justify-center space-x-1 mb-1">
+                  <ShieldX className="h-3 w-3 text-destructive" />
+                  <span className="text-xs text-muted-foreground">Blocked</span>
                 </div>
-                <div className="text-2xl font-bold">{stats.threatsBlocked}</div>
-                <div className="text-sm text-muted-foreground">Threats Stopped</div>
+                <div className="text-xl font-bold">{stats.threatsBlocked}</div>
+                <div className="text-xs text-muted-foreground">Threats Stopped</div>
               </div>
             </div>
             
             {scanLimit && scanLimit.planType === 'free' && (
-              <div className="text-center p-3 bg-muted rounded-lg">
-                <div className="text-sm text-muted-foreground">Monthly Scans</div>
-                <div className="text-lg font-semibold">
+              <div className="text-center p-2 bg-muted rounded-lg mb-2">
+                <div className="text-xs text-muted-foreground">Monthly Scans</div>
+                <div className="text-base font-semibold">
                   {scanLimit.remaining} / {scanLimit.total} remaining
                 </div>
               </div>
             )}
             
             {isProtectionActive && (
-              <Badge variant="secondary" className="w-full justify-center">
+              <Badge variant="secondary" className="w-full justify-center text-xs py-1">
                 System Integration Active
               </Badge>
             )}
@@ -246,24 +247,24 @@ export default function Home() {
 
         {/* URL Security Scanner */}
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Shield className="h-5 w-5 text-primary" />
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center space-x-2 text-base">
+              <Shield className="h-4 w-4 text-primary" />
               <span>URL Security Scanner</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-3 pt-0">
             <Input
               placeholder="Paste or enter URL to check for threats..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="text-base"
+              className="text-sm h-10"
             />
-            <div className="flex space-x-3">
+            <div className="flex space-x-2">
               <Button 
                 onClick={handleScanUrl}
                 disabled={!url.trim() || isScanning}
-                className="flex-1"
+                className="flex-1 h-10"
               >
                 <Shield className="mr-2 h-4 w-4" />
                 {isScanning ? "Scanning..." : "Scan URL"}
@@ -272,7 +273,7 @@ export default function Home() {
                 variant="outline"
                 size="icon"
                 onClick={handleQrScan}
-                className="shrink-0"
+                className="shrink-0 h-10 w-10"
               >
                 <QrCode className="h-4 w-4" />
               </Button>

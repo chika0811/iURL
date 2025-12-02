@@ -35,7 +35,7 @@ export function BottomNavigation() {
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-background border-t border-border z-50">
-      <div className="flex items-center justify-around py-2 px-2 max-w-lg mx-auto">
+      <div className="flex items-center justify-around py-1.5 px-2 max-w-lg mx-auto">
         {visibleNavigation.map((item) => {
           const isActive = location.pathname === item.href
           return (
