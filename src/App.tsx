@@ -4,6 +4,9 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
+import { useEffect } from "react";
+import { NavigationBar } from "@squareetlabs/capacitor-navigation-bar";
+import { Capacitor } from "@capacitor/core";
 import Welcome from "./pages/Welcome";
 import Home from "./pages/Home";
 import History from "./pages/History";
@@ -17,9 +20,19 @@ import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider defaultTheme="system" storageKey="iurl-theme">
+const App = () => {
+  useEffect(() => {
+    if (Capacitor.isNativePlatform()) {
+      // Hide the navigation bar on Android
+      NavigationBar.hide();
+      // Ensure it stays transparent if it reappears
+      NavigationBar.setTransparency({ isTransparent: true });
+    }
+  }, []);
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider defaultTheme="system" storageKey="iurl-theme">
       <TooltipProvider>
         <Toaster />
         <Sonner />
@@ -39,9 +52,10 @@ const App = () => (
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>
-      </TooltipProvider>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+        </TooltipProvider>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
