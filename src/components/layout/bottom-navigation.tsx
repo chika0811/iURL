@@ -28,9 +28,13 @@ const navigation = [
 export function BottomNavigation() {
   const location = useLocation()
 
-  // Filter out Home button when on home page
+  // Filter out the button that corresponds to the current page
   const visibleNavigation = navigation.filter(
-    (item) => !(item.href === "/home" && location.pathname === "/home")
+    (item) => {
+      // Normalize paths by removing trailing slashes for comparison
+      const normalizePath = (path: string) => path.replace(/\/$/, "")
+      return normalizePath(item.href) !== normalizePath(location.pathname)
+    }
   )
 
   return (
