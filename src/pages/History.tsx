@@ -140,46 +140,46 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 flex flex-col">
+    <div className="min-h-screen bg-background pb-16 flex flex-col">
       <AppHeader />
       
-      <div className="p-4 space-y-6 max-w-lg mx-auto flex-1 flex flex-col justify-center">
+      <div className="p-3 space-y-4 max-w-lg mx-auto flex-1 flex flex-col justify-center">
         <div className="flex items-center justify-between">
-          <h1 className="text-2xl font-bold">Scan History</h1>
+          <h1 className="text-xl font-bold">Scan History</h1>
           {history.length > 0 && (
             <Button variant="destructive" size="sm" onClick={clearHistory}>
-              <Trash2 className="h-4 w-4 mr-2" />
-              Clear All
+              <Trash2 className="h-3.5 w-3.5 mr-1.5" />
+              <span className="text-xs">Clear All</span>
             </Button>
           )}
         </div>
 
         {loading ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4 animate-pulse" />
-              <p className="text-sm text-muted-foreground">Loading history...</p>
+            <CardContent className="py-8 text-center">
+              <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-3 animate-pulse" />
+              <p className="text-xs text-muted-foreground">Loading history...</p>
             </CardContent>
           </Card>
         ) : history.length === 0 ? (
           <Card>
-            <CardContent className="py-12 text-center">
-              <Shield className="h-16 w-16 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">No History Yet</h3>
-              <p className="text-sm text-muted-foreground">
+            <CardContent className="py-8 text-center">
+              <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-3" />
+              <h3 className="text-base font-semibold mb-1.5">No History Yet</h3>
+              <p className="text-xs text-muted-foreground">
                 Scanned URLs will appear here
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {history.map((item) => (
               <Card key={item.url} className="overflow-hidden">
-                <CardContent className="p-4">
-                  <div className="flex items-start justify-between space-x-4">
+                <CardContent className="p-3">
+                  <div className="flex items-start justify-between space-x-3">
                     <div className="flex-1 min-w-0">
-                      <div className="flex items-center space-x-2 mb-2">
-                        <Shield className={`h-4 w-4 ${
+                      <div className="flex items-center space-x-1.5 mb-1.5">
+                        <Shield className={`h-3.5 w-3.5 ${
                           item.verdict === 'clean' ? 'text-green-500' : 
                           item.verdict === 'suspicious' ? 'text-yellow-500' : 
                           'text-red-500'
@@ -188,44 +188,46 @@ export default function History() {
                           item.verdict === 'clean' ? 'secondary' : 
                           item.verdict === 'suspicious' ? 'outline' : 
                           'destructive'
-                        }>
+                        } className="text-[10px] px-1.5 py-0">
                           {item.verdict}
                         </Badge>
-                        <Badge variant="outline">
+                        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
                           {item.score}/100
                         </Badge>
                         {item.count && item.count > 1 && (
-                          <Badge variant="outline">×{item.count}</Badge>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">×{item.count}</Badge>
                         )}
                       </div>
-                      <p className="text-sm font-mono break-all text-muted-foreground mb-1">
+                      <p className="text-xs font-mono break-all text-muted-foreground mb-0.5">
                         {item.url}
                       </p>
                       {item.reasons && item.reasons[0] && (
-                        <p className="text-xs text-muted-foreground mb-1">
+                        <p className="text-[10px] text-muted-foreground mb-0.5">
                           {item.reasons[0]}
                         </p>
                       )}
-                      <p className="text-xs text-muted-foreground">
+                      <p className="text-[10px] text-muted-foreground">
                         {new Date(item.timestamp).toLocaleString()}
                       </p>
                     </div>
-                    <div className="flex space-x-2">
+                    <div className="flex space-x-1">
                       {item.verdict === 'clean' && (
                         <Button
                           size="icon"
                           variant="ghost"
+                          className="h-7 w-7"
                           onClick={() => window.open(item.url, '_blank')}
                         >
-                          <ExternalLink className="h-4 w-4" />
+                          <ExternalLink className="h-3.5 w-3.5" />
                         </Button>
                       )}
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="h-7 w-7"
                         onClick={() => handleDeleteItem(item.url)}
                       >
-                        <Trash2 className="h-4 w-4" />
+                        <Trash2 className="h-3.5 w-3.5" />
                       </Button>
                     </div>
                   </div>
