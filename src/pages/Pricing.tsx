@@ -7,6 +7,7 @@ import { supabase } from "@/integrations/supabase/client"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { useNavigate } from "react-router-dom"
+import FloatingBubbles from "@/components/ui/floating-bubbles"
 
 // Declare Paystack type
 declare global {
@@ -62,13 +63,6 @@ export default function Pricing() {
     return () => {
       document.body.removeChild(script)
     }
-  }, [])
-
-  useEffect(() => {
-    // Get current user
-    supabase.auth.getUser().then(({ data: { user } }) => {
-      setUser(user)
-    })
   }, [])
 
   const handlePaymentCallback = async (reference: string) => {
@@ -138,6 +132,13 @@ export default function Pricing() {
 
     // Check authentication only when subscribing
     if (!user) {
+      // Store subscription intent before redirecting to login
+      localStorage.setItem('subscriptionIntent', JSON.stringify({
+        planName,
+        price: price,
+        timestamp: Date.now()
+      }))
+      
       toast({
         title: "Authentication required",
         description: "Please log in to subscribe",
@@ -222,6 +223,34 @@ export default function Pricing() {
     }
   }
 
+  // Check for subscription intent after user login
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data: { user } }) => {
+      setUser(user)
+      
+      if (user) {
+        const intentStr = localStorage.getItem('subscriptionIntent')
+        if (intentStr) {
+          try {
+            const intent = JSON.parse(intentStr)
+            // Check if intent is less than 5 minutes old
+            if (Date.now() - intent.timestamp < 5 * 60 * 1000) {
+              localStorage.removeItem('subscriptionIntent')
+              // Auto-trigger subscription with stored plan details
+              setTimeout(() => {
+                handleSubscribe(intent.planName, intent.price)
+              }, 500)
+            } else {
+              localStorage.removeItem('subscriptionIntent')
+            }
+          } catch (e) {
+            localStorage.removeItem('subscriptionIntent')
+          }
+        }
+      }
+    })
+  }, [])
+
   const plans = [
     {
       name: "Free",
@@ -267,10 +296,11 @@ export default function Pricing() {
   ]
 
   return (
-    <div className="min-h-screen bg-background pb-16 flex flex-col">
+    <div className="min-h-screen bg-background pb-16 flex flex-col relative">
+      <FloatingBubbles />
       <AppHeader />
       
-      <main className="container mx-auto p-3 max-w-6xl flex-1 flex flex-col justify-center">
+      <main className="container mx-auto p-3 max-w-6xl flex-1 flex flex-col justify-center relative z-10">
         <div className="text-center mb-6">
           <h1 className="text-2xl font-bold mb-1.5">Choose Your Plan</h1>
           <p className="text-sm text-muted-foreground">
