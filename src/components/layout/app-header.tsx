@@ -18,12 +18,12 @@ export function AppHeader() {
   }, [])
 
   return (
-    <header className="flex items-center justify-center p-1.5 md:p-2 bg-background border-b border-border relative">
+    <header className="flex items-center justify-center p-1 md:p-1.5 bg-background border-b border-border relative h-10 md:h-12 shrink-0 z-50">
       <div className="flex items-center space-x-1.5">
-        <img src={iurlLogo} alt="iURL Logo" className="h-6 w-6 md:h-8 md:w-8 rounded-lg" />
+        <img src={iurlLogo} alt="iURL Logo" className="h-5 w-5 md:h-6 md:w-6 rounded-lg" />
         <div>
-          <h1 className="text-sm md:text-lg font-bold">iURL</h1>
-          <p className="text-[9px] md:text-xs text-muted-foreground hidden sm:block">Smart Link Protection</p>
+          <h1 className="text-sm md:text-base font-bold">iURL</h1>
+          <p className="text-[8px] md:text-[10px] text-muted-foreground hidden sm:block">Smart Link Protection</p>
         </div>
       </div>
       <div className="absolute right-1.5 md:right-2 flex items-center gap-1">
