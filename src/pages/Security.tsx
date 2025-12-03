@@ -9,6 +9,7 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft, Shield, Key, History } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
+import FloatingBubbles from "@/components/ui/floating-bubbles";
 
 export default function Security() {
   const [currentPassword, setCurrentPassword] = useState("");
@@ -18,7 +19,6 @@ export default function Security() {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // Fetch login activity
   const { data: loginActivity } = useQuery({
     queryKey: ['login-activity'],
     queryFn: async () => {
@@ -84,48 +84,50 @@ export default function Security() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 to-blue-100 dark:from-gray-900 dark:to-gray-800 p-4">
-      <div className="container max-auto max-w-4xl py-8">
+    <div className="min-h-screen bg-background p-2 relative">
+      <FloatingBubbles />
+      <div className="container max-auto max-w-4xl py-4 relative z-10">
         <Button
           variant="ghost"
           onClick={() => navigate(-1)}
-          className="mb-6"
+          className="mb-4 h-8"
+          size="sm"
         >
-          <ArrowLeft className="mr-2 h-4 w-4" />
+          <ArrowLeft className="mr-1.5 h-3.5 w-3.5" />
           Back
         </Button>
 
-        <div className="flex items-center gap-3 mb-8">
-          <Shield className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold">Security Settings</h1>
+        <div className="flex items-center gap-2 mb-4">
+          <Shield className="h-6 w-6 text-primary" />
+          <h1 className="text-xl font-bold">Security Settings</h1>
         </div>
 
-        <div className="space-y-6">
-          {/* Password Change Section */}
+        <div className="space-y-4">
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Key className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Key className="h-4 w-4" />
                 Change Password
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs">
                 Update your password to keep your account secure
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="current-password">Current Password</Label>
+              <form onSubmit={handlePasswordChange} className="space-y-3">
+                <div className="space-y-1.5">
+                  <Label htmlFor="current-password" className="text-xs">Current Password</Label>
                   <Input
                     id="current-password"
                     type="password"
                     value={currentPassword}
                     onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Enter current password"
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="new-password">New Password</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="new-password" className="text-xs">New Password</Label>
                   <Input
                     id="new-password"
                     type="password"
@@ -133,10 +135,11 @@ export default function Security() {
                     onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="Enter new password"
                     required
+                    className="h-9 text-sm"
                   />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="confirm-password">Confirm New Password</Label>
+                <div className="space-y-1.5">
+                  <Label htmlFor="confirm-password" className="text-xs">Confirm New Password</Label>
                   <Input
                     id="confirm-password"
                     type="password"
@@ -144,53 +147,53 @@ export default function Security() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm new password"
                     required
+                    className="h-9 text-sm"
                   />
                 </div>
-                <Button type="submit" disabled={loading} className="w-full">
+                <Button type="submit" disabled={loading} className="w-full h-9">
                   {loading ? "Updating..." : "Update Password"}
                 </Button>
               </form>
             </CardContent>
           </Card>
 
-          {/* Login Activity Section */}
           <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <History className="h-5 w-5" />
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <History className="h-4 w-4" />
                 Recent Login Activity
               </CardTitle>
-              <CardDescription>
+              <CardDescription className="text-xs">
                 View your recent login history (last 10 logins)
               </CardDescription>
             </CardHeader>
             <CardContent>
               {loginActivity && loginActivity.length > 0 ? (
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {loginActivity.map((activity) => (
                     <div
                       key={activity.id}
-                      className="flex justify-between items-start p-3 bg-gray-50 dark:bg-gray-800 rounded-lg"
+                      className="flex justify-between items-start p-2 bg-muted rounded-lg"
                     >
-                      <div className="space-y-1">
-                        <p className="font-medium">
+                      <div className="space-y-0.5">
+                        <p className="text-xs font-medium">
                           {format(new Date(activity.login_timestamp), "PPpp")}
                         </p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">
+                        <p className="text-[10px] text-muted-foreground">
                           Method: {activity.login_method}
                         </p>
-                        <p className="text-xs text-gray-500 dark:text-gray-500">
+                        <p className="text-[10px] text-muted-foreground">
                           IP: {activity.ip_address}
                         </p>
                       </div>
-                      <div className="text-xs text-gray-400 max-w-[200px] truncate">
+                      <div className="text-[10px] text-muted-foreground max-w-[150px] truncate">
                         {activity.user_agent}
                       </div>
                     </div>
                   ))}
                 </div>
               ) : (
-                <p className="text-gray-500 text-center py-4">
+                <p className="text-muted-foreground text-center py-4 text-xs">
                   No login activity found
                 </p>
               )}

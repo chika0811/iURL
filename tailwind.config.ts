@@ -83,6 +83,16 @@ export default {
         sm: "calc(var(--radius) - 4px)",
       },
       keyframes: {
+        'fade-in-up': {
+          '0%': {
+            opacity: '0',
+            transform: 'translateY(20px)'
+          },
+          '100%': {
+            opacity: '1',
+            transform: 'translateY(0)'
+          }
+        },
         "accordion-down": {
           from: {
             height: "0",
@@ -119,6 +129,7 @@ export default {
         "accordion-up": "accordion-up 0.2s ease-out",
         "float-slow": "float-up 20s ease-in-out infinite",
         "float-medium": "float-up 25s ease-in-out infinite",
+        "fade-in-up": "fade-in-up 0.5s ease-out forwards",
       },
     },
   },
