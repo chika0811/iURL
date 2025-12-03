@@ -11,6 +11,7 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { format } from "date-fns";
 import { AppHeader } from "@/components/layout/app-header";
 import { BottomNavigation } from "@/components/layout/bottom-navigation";
+import FloatingBubbles from "@/components/ui/floating-bubbles";
 
 interface Subscription {
   id: string;
@@ -56,7 +57,6 @@ export default function SubscriptionDashboard() {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Fetch active subscription
       const { data: subData, error: subError } = await supabase
         .from("subscriptions")
         .select("*")
@@ -69,7 +69,6 @@ export default function SubscriptionDashboard() {
       if (subError) throw subError;
       setSubscription(subData);
 
-      // Fetch payment history
       const { data: paymentData, error: paymentError } = await supabase
         .from("payments")
         .select("*")
@@ -126,15 +125,16 @@ export default function SubscriptionDashboard() {
       cancelled: "outline",
       failed: "destructive",
     };
-    return <Badge variant={variants[status] || "outline"}>{status}</Badge>;
+    return <Badge variant={variants[status] || "outline"} className="text-[10px]">{status}</Badge>;
   };
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-20 flex flex-col">
+      <div className="min-h-screen bg-background pb-14 flex flex-col relative">
+        <FloatingBubbles />
         <AppHeader />
         <div className="flex-1 flex items-center justify-center">
-          <Loader2 className="h-8 w-8 animate-spin" />
+          <Loader2 className="h-6 w-6 animate-spin" />
         </div>
         <BottomNavigation />
       </div>
@@ -142,162 +142,163 @@ export default function SubscriptionDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-20 flex flex-col">
+    <div className="min-h-screen bg-background pb-14 flex flex-col relative">
+      <FloatingBubbles />
       <AppHeader />
       
-      <main className="container mx-auto py-8 px-4 max-w-6xl flex-1">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">Subscription Dashboard</h1>
-          <Button variant="outline" onClick={() => navigate("/home")}>
+      <main className="container mx-auto py-4 px-2 max-w-6xl flex-1 relative z-10">
+        <div className="flex justify-between items-center mb-4">
+          <h1 className="text-xl font-bold">Subscription Dashboard</h1>
+          <Button variant="outline" size="sm" onClick={() => navigate("/home")} className="h-8 text-xs">
             Back to Home
           </Button>
         </div>
 
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
+        <div className="grid gap-4 md:grid-cols-2 mb-4">
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <CreditCard className="h-4 w-4" />
+                Current Plan
+              </CardTitle>
+              <CardDescription className="text-xs">Your active subscription details</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {subscription ? (
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold text-sm">{subscription.plan_name}</span>
+                    {getStatusBadge(subscription.status)}
+                  </div>
+                  <div className="flex justify-between items-center text-xs">
+                    <span className="text-muted-foreground">Amount</span>
+                    <span className="font-semibold">₦{subscription.amount}</span>
+                  </div>
+                  {subscription.start_date && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Start Date</span>
+                      <span>{format(new Date(subscription.start_date), "MMM dd, yyyy")}</span>
+                    </div>
+                  )}
+                  {subscription.end_date && (
+                    <div className="flex justify-between items-center text-xs">
+                      <span className="text-muted-foreground">Renewal Date</span>
+                      <span>{format(new Date(subscription.end_date), "MMM dd, yyyy")}</span>
+                    </div>
+                  )}
+                  <div className="pt-2 space-y-2">
+                    <Button 
+                      className="w-full h-8 text-xs" 
+                      onClick={() => navigate("/pricing")}
+                    >
+                      <TrendingUp className="mr-1.5 h-3.5 w-3.5" />
+                      Upgrade Plan
+                    </Button>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="outline" className="w-full h-8 text-xs">
+                          Cancel Subscription
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            This will cancel your subscription. You can always resubscribe later.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={handleCancelSubscription}
+                            disabled={cancelling}
+                          >
+                            {cancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+                            Confirm
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  </div>
+                </div>
+              ) : (
+                <div className="text-center py-4">
+                  <p className="text-muted-foreground text-xs mb-3">No active subscription</p>
+                  <Button onClick={() => navigate("/pricing")} size="sm" className="h-8 text-xs">
+                    View Plans
+                  </Button>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <Calendar className="h-4 w-4" />
+                Quick Stats
+              </CardTitle>
+              <CardDescription className="text-xs">Your subscription overview</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              <div className="flex justify-between items-center p-2.5 bg-muted rounded-lg">
+                <span className="text-muted-foreground text-xs">Total Payments</span>
+                <span className="font-bold text-lg">{payments.length}</span>
+              </div>
+              <div className="flex justify-between items-center p-2.5 bg-muted rounded-lg">
+                <span className="text-muted-foreground text-xs">Successful Payments</span>
+                <span className="font-bold text-lg text-green-600">
+                  {payments.filter(p => p.status === 'success').length}
+                </span>
+              </div>
+              <div className="flex justify-between items-center p-2.5 bg-muted rounded-lg">
+                <span className="text-muted-foreground text-xs">Status</span>
+                <span className="font-bold text-lg">
+                  {subscription?.status === 'active' ? '✓ Active' : '✗ Inactive'}
+                </span>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <CreditCard className="h-5 w-5" />
-              Current Plan
-            </CardTitle>
-            <CardDescription>Your active subscription details</CardDescription>
+          <CardHeader className="pb-2">
+            <CardTitle className="text-base">Payment History</CardTitle>
+            <CardDescription className="text-xs">Your recent payment transactions</CardDescription>
           </CardHeader>
           <CardContent>
-            {subscription ? (
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="font-semibold text-lg">{subscription.plan_name}</span>
-                  {getStatusBadge(subscription.status)}
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">Amount</span>
-                  <span className="font-semibold">₦{subscription.amount}</span>
-                </div>
-                {subscription.start_date && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Start Date</span>
-                    <span>{format(new Date(subscription.start_date), "MMM dd, yyyy")}</span>
-                  </div>
-                )}
-                {subscription.end_date && (
-                  <div className="flex justify-between items-center">
-                    <span className="text-muted-foreground">Renewal Date</span>
-                    <span>{format(new Date(subscription.end_date), "MMM dd, yyyy")}</span>
-                  </div>
-                )}
-                <div className="pt-4 space-y-2">
-                  <Button 
-                    className="w-full" 
-                    onClick={() => navigate("/pricing")}
-                  >
-                    <TrendingUp className="mr-2 h-4 w-4" />
-                    Upgrade Plan
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="outline" className="w-full">
-                        Cancel Subscription
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This will cancel your subscription. You can always resubscribe later.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleCancelSubscription}
-                          disabled={cancelling}
-                        >
-                          {cancelling && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-                          Confirm
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </div>
+            {payments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="text-xs">Date</TableHead>
+                    <TableHead className="text-xs">Amount</TableHead>
+                    <TableHead className="text-xs">Method</TableHead>
+                    <TableHead className="text-xs">Status</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map((payment) => (
+                    <TableRow key={payment.id}>
+                      <TableCell className="text-xs">
+                        {format(new Date(payment.created_at), "MMM dd, yyyy HH:mm")}
+                      </TableCell>
+                      <TableCell className="text-xs">
+                        {payment.currency} {payment.amount}
+                      </TableCell>
+                      <TableCell className="text-xs">{payment.payment_method || 'N/A'}</TableCell>
+                      <TableCell>{getStatusBadge(payment.status)}</TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             ) : (
-              <div className="text-center py-8">
-                <p className="text-muted-foreground mb-4">No active subscription</p>
-                <Button onClick={() => navigate("/pricing")}>
-                  View Plans
-                </Button>
+              <div className="text-center py-6 text-muted-foreground text-xs">
+                No payment history available
               </div>
             )}
           </CardContent>
         </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Calendar className="h-5 w-5" />
-              Quick Stats
-            </CardTitle>
-            <CardDescription>Your subscription overview</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-              <span className="text-muted-foreground">Total Payments</span>
-              <span className="font-bold text-2xl">{payments.length}</span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-              <span className="text-muted-foreground">Successful Payments</span>
-              <span className="font-bold text-2xl text-green-600">
-                {payments.filter(p => p.status === 'success').length}
-              </span>
-            </div>
-            <div className="flex justify-between items-center p-4 bg-muted rounded-lg">
-              <span className="text-muted-foreground">Status</span>
-              <span className="font-bold text-2xl">
-                {subscription?.status === 'active' ? '✓ Active' : '✗ Inactive'}
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Payment History</CardTitle>
-          <CardDescription>Your recent payment transactions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          {payments.length > 0 ? (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Method</TableHead>
-                  <TableHead>Status</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {payments.map((payment) => (
-                  <TableRow key={payment.id}>
-                    <TableCell>
-                      {format(new Date(payment.created_at), "MMM dd, yyyy HH:mm")}
-                    </TableCell>
-                    <TableCell>
-                      {payment.currency} {payment.amount}
-                    </TableCell>
-                    <TableCell>{payment.payment_method || 'N/A'}</TableCell>
-                    <TableCell>{getStatusBadge(payment.status)}</TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          ) : (
-            <div className="text-center py-8 text-muted-foreground">
-              No payment history available
-            </div>
-          )}
-        </CardContent>
-      </Card>
       </main>
       
       <BottomNavigation />

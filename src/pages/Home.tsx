@@ -10,6 +10,7 @@ import { LinkStatusPopup } from "@/components/ui/link-status-popup"
 import { LinkIntegrityCard } from "@/components/ui/link-integrity-card"
 import { QrScanner } from "@/components/qr-scanner"
 import { AllowlistManager } from "@/components/allowlist-manager"
+import FloatingBubbles from "@/components/ui/floating-bubbles"
 import { useUrlScanner, ScanResult } from "@/hooks/use-url-scanner"
 import { useDailyStats } from "@/hooks/use-daily-stats"
 import { useBackgroundService } from "@/hooks/use-background-service"
@@ -37,13 +38,11 @@ export default function Home() {
   const navigate = useNavigate()
 
   useEffect(() => {
-    // Listen for URL scan requests from notifications
     const handleScanFromNotification = (event: CustomEvent) => {
       setUrl(event.detail.url)
       handleScanUrl()
     }
 
-    // Listen for clipboard URL detection
     const handleClipboardUrlDetected = (event: CustomEvent) => {
       setUrl(event.detail.url)
       handleScanUrl(event.detail.url)
@@ -58,7 +57,6 @@ export default function Home() {
     }
   }, [])
 
-  // Auto-start clipboard monitoring for premium/business users only
   useEffect(() => {
     const initClipboardMonitoring = async () => {
       if (hasBackgroundAccess) {
@@ -99,7 +97,6 @@ export default function Home() {
 
     if (!targetUrl.trim()) return
     
-    // Check scan limit for free users
     if (scanLimit && !scanLimit.canScan) {
       toast({
         title: "Scan limit reached",
@@ -116,7 +113,6 @@ export default function Home() {
       const result = await scanUrl(targetUrl.trim())
       setScanResult(result)
       
-      // Increment scan count after successful scan
       if (scanLimit && scanLimit.planType === 'free') {
         await incrementScanCount()
       }
@@ -147,7 +143,6 @@ export default function Home() {
   const handleQrResult = (scannedUrl: string) => {
     setUrl(scannedUrl)
     setShowQrScanner(false)
-    // Auto-scan the detected URL
     handleScanUrl(scannedUrl)
   }
 
@@ -177,105 +172,104 @@ export default function Home() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-16 flex flex-col">
+    <div className="min-h-screen bg-background pb-14 flex flex-col relative">
+      <FloatingBubbles />
       <AppHeader />
       
-      <div className="p-3 space-y-3 max-w-lg mx-auto text-center flex-1 flex flex-col justify-center">
-        {/* Real-time Protection Section */}
+      <div className="p-2 space-y-2 max-w-lg mx-auto text-center flex-1 flex flex-col justify-center relative z-10">
         <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between mb-3">
+          <CardContent className="p-3">
+            <div className="flex items-center justify-between mb-2">
               <div className="flex items-center space-x-2">
-                <Shield className="h-5 w-5 text-primary" />
-                <h2 className="text-base font-semibold">Real-time Protection</h2>
+                <Shield className="h-4 w-4 text-primary" />
+                <h2 className="text-sm font-semibold">Real-time Protection</h2>
               </div>
               <div className="flex space-x-1">
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={() => setShowAllowlist(true)}
-                  className="h-8 w-8"
+                  className="h-7 w-7"
                 >
-                  <Settings className="h-4 w-4" />
+                  <Settings className="h-3.5 w-3.5" />
                 </Button>
                 <Button
                   variant={isProtectionActive ? "default" : "outline"}
                   onClick={handleToggleProtection}
-                  className="px-4 h-8 text-sm"
+                  className="px-3 h-7 text-xs"
                 >
                   {isProtectionActive ? "Active" : "Activate"}
                 </Button>
               </div>
             </div>
             
-            <div className="grid grid-cols-2 gap-3 mb-3">
+            <div className="grid grid-cols-2 gap-2 mb-2">
               <div className="text-center">
-                <div className="flex items-center justify-center space-x-1 mb-1">
+                <div className="flex items-center justify-center space-x-1 mb-0.5">
                   <TrendingUp className="h-3 w-3 text-primary" />
-                  <span className="text-xs text-muted-foreground">Today</span>
+                  <span className="text-[10px] text-muted-foreground">Today</span>
                 </div>
-                <div className="text-xl font-bold">{stats.linksChecked}</div>
-                <div className="text-xs text-muted-foreground">Links Checked</div>
+                <div className="text-lg font-bold">{stats.linksChecked}</div>
+                <div className="text-[10px] text-muted-foreground">Links Checked</div>
               </div>
               
               <div className="text-center">
-                <div className="flex items-center justify-center space-x-1 mb-1">
+                <div className="flex items-center justify-center space-x-1 mb-0.5">
                   <ShieldX className="h-3 w-3 text-destructive" />
-                  <span className="text-xs text-muted-foreground">Blocked</span>
+                  <span className="text-[10px] text-muted-foreground">Blocked</span>
                 </div>
-                <div className="text-xl font-bold">{stats.threatsBlocked}</div>
-                <div className="text-xs text-muted-foreground">Threats Stopped</div>
+                <div className="text-lg font-bold">{stats.threatsBlocked}</div>
+                <div className="text-[10px] text-muted-foreground">Threats Stopped</div>
               </div>
             </div>
             
             {scanLimit && scanLimit.planType === 'free' && (
-              <div className="text-center p-2 bg-muted rounded-lg mb-2">
-                <div className="text-xs text-muted-foreground">Monthly Scans</div>
-                <div className="text-base font-semibold">
+              <div className="text-center p-1.5 bg-muted rounded-lg mb-1.5">
+                <div className="text-[10px] text-muted-foreground">Monthly Scans</div>
+                <div className="text-sm font-semibold">
                   {scanLimit.remaining} / {scanLimit.total} remaining
                 </div>
               </div>
             )}
             
             {isProtectionActive && (
-              <Badge variant="secondary" className="w-full justify-center text-xs py-1">
+              <Badge variant="secondary" className="w-full justify-center text-[10px] py-0.5">
                 System Integration Active
               </Badge>
             )}
           </CardContent>
         </Card>
 
-        {/* URL Security Scanner */}
         <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="flex items-center space-x-2 text-base">
-              <Shield className="h-4 w-4 text-primary" />
+          <CardHeader className="pb-2 pt-3">
+            <CardTitle className="flex items-center space-x-2 text-sm">
+              <Shield className="h-3.5 w-3.5 text-primary" />
               <span>URL Security Scanner</span>
             </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3 pt-0">
+          <CardContent className="space-y-2 pt-0 pb-3">
             <Input
               placeholder="Paste or enter URL to check for threats..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
-              className="text-sm h-10"
+              className="text-xs h-9"
             />
             <div className="flex space-x-2">
               <Button 
                 onClick={handleScanUrl}
                 disabled={!url.trim() || isScanning}
-                className="flex-1 h-10"
+                className="flex-1 h-9 text-xs"
               >
-                <Shield className="mr-2 h-4 w-4" />
+                <Shield className="mr-1.5 h-3.5 w-3.5" />
                 {isScanning ? "Scanning..." : "Scan URL"}
               </Button>
               <Button
                 variant="outline"
                 size="icon"
                 onClick={handleQrScan}
-                className="shrink-0 h-10 w-10"
+                className="shrink-0 h-9 w-9"
               >
-                <QrCode className="h-4 w-4" />
+                <QrCode className="h-3.5 w-3.5" />
               </Button>
             </div>
           </CardContent>

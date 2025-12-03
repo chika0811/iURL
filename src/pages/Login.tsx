@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Shield, Loader2, AlertTriangle } from "lucide-react";
+import { Loader2, AlertTriangle } from "lucide-react";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -18,6 +18,8 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
+import iurlLogo from "@/assets/iurl-logo.png";
+import FloatingBubbles from "@/components/ui/floating-bubbles";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -92,7 +94,6 @@ export default function Login() {
           });
         } catch (trackError) {
           console.error('Error tracking login:', trackError);
-          // Don't block login if tracking fails
         }
       }
 
@@ -113,22 +114,23 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-md space-y-8">
-        <div className="text-center space-y-4">
-          <div className="bg-primary rounded-3xl p-6 mx-auto w-fit">
-            <Shield className="h-12 w-12 text-primary-foreground" />
+    <div className="min-h-screen bg-background flex items-center justify-center p-4 relative">
+      <FloatingBubbles />
+      <div className="w-full max-w-md space-y-6 relative z-10">
+        <div className="text-center space-y-3">
+          <div className="mx-auto w-fit">
+            <img src={iurlLogo} alt="iURL Logo" className="h-16 w-16 rounded-xl" />
           </div>
           <div>
-            <h1 className="text-3xl font-bold">iURL</h1>
-            <p className="text-muted-foreground">Smart Link Protection</p>
+            <h1 className="text-2xl font-bold">iURL</h1>
+            <p className="text-sm text-muted-foreground">Smart Link Protection</p>
           </div>
         </div>
 
         <Card>
-          <CardHeader>
-            <CardTitle>Welcome</CardTitle>
-            <CardDescription>Sign in to your account or create a new one</CardDescription>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg">Welcome</CardTitle>
+            <CardDescription className="text-xs">Sign in to your account or create a new one</CardDescription>
           </CardHeader>
           <CardContent>
             <Tabs defaultValue="signin">
@@ -138,9 +140,9 @@ export default function Login() {
               </TabsList>
               
               <TabsContent value="signin">
-                <form onSubmit={handleSignIn} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-email">Email</Label>
+                <form onSubmit={handleSignIn} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signin-email" className="text-xs">Email</Label>
                     <Input
                       id="signin-email"
                       type="email"
@@ -148,10 +150,11 @@ export default function Login() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="h-9 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signin-password">Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signin-password" className="text-xs">Password</Label>
                     <Input
                       id="signin-password"
                       type="password"
@@ -159,9 +162,10 @@ export default function Login() {
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
+                      className="h-9 text-sm"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full h-9" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign In
                   </Button>
@@ -169,9 +173,9 @@ export default function Login() {
               </TabsContent>
 
               <TabsContent value="signup">
-                <form onSubmit={handleSignUp} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-email">Email</Label>
+                <form onSubmit={handleSignUp} className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signup-email" className="text-xs">Email</Label>
                     <Input
                       id="signup-email"
                       type="email"
@@ -179,10 +183,11 @@ export default function Login() {
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
+                      className="h-9 text-sm"
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="signup-password">Password</Label>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="signup-password" className="text-xs">Password</Label>
                     <Input
                       id="signup-password"
                       type="password"
@@ -191,9 +196,10 @@ export default function Login() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       minLength={6}
+                      className="h-9 text-sm"
                     />
                   </div>
-                  <Button type="submit" className="w-full" disabled={loading}>
+                  <Button type="submit" className="w-full h-9" disabled={loading}>
                     {loading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
                     Sign Up
                   </Button>
@@ -204,7 +210,7 @@ export default function Login() {
         </Card>
 
         <div className="text-center">
-          <Button variant="ghost" onClick={() => setShowGuestWarning(true)}>
+          <Button variant="ghost" size="sm" onClick={() => setShowGuestWarning(true)}>
             Continue as Guest
           </Button>
         </div>
