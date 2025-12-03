@@ -17,6 +17,7 @@ import Security from "./pages/Security";
 import SubscriptionDashboard from "./pages/SubscriptionDashboard";
 import PaymentStatus from "./pages/PaymentStatus";
 import NotFound from "./pages/NotFound";
+import FloatingBubbles from "@/components/ui/floating-bubbles";
 
 const queryClient = new QueryClient();
 
@@ -36,6 +37,7 @@ const App = () => {
       <TooltipProvider>
         <Toaster />
         <Sonner />
+        <FloatingBubbles />
         <BrowserRouter>
           <Routes>
             <Route path="/" element={<Navigate to="/welcome" replace />} />
