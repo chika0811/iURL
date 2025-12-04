@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { Resend } from "resend"
+import { Resend } from "npm:resend@2.0.0"
 import { z } from 'https://deno.land/x/zod@v3.22.4/mod.ts'
 
 const resend = new Resend(Deno.env.get("RESEND_API_KEY"))
@@ -148,7 +148,7 @@ serve(async (req) => {
   } catch (error) {
     console.error('Error in send-subscription-email function:', error)
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: error instanceof Error ? error.message : 'Unknown error' }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     )
   }

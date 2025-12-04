@@ -292,6 +292,20 @@ export default function Pricing() {
         "Advanced security controls",
         "Dedicated account manager"
       ]
+    },
+    {
+      name: "Family",
+      price: "$9.99",
+      period: "month",
+      features: [
+        "Up to 5 family members",
+        "Individual dashboards per member",
+        "Shared threat intelligence",
+        "Parental controls",
+        "Family activity reports",
+        "Premium features for all members"
+      ],
+      comingSoon: true
     }
   ]
 
@@ -308,10 +322,11 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="grid md:grid-cols-3 gap-4 max-w-7xl mx-auto">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-4 max-w-7xl mx-auto">
           {plans.map((plan) => {
             const isPremium = plan.name === "Premium";
             const isFree = plan.name === "Free";
+            const isComingSoon = 'comingSoon' in plan && plan.comingSoon;
             const displayPrice = isPremium ? plan.monthlyPrice : plan.price;
             
             return (
@@ -326,6 +341,11 @@ export default function Pricing() {
                 {plan.popular && (
                   <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-primary text-primary-foreground text-[10px] font-bold px-3 py-0.5 rounded-full">
                     MOST POPULAR
+                  </div>
+                )}
+                {isComingSoon && (
+                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">
+                    COMING SOON
                   </div>
                 )}
                 <CardHeader className="pb-3">
@@ -362,15 +382,17 @@ export default function Pricing() {
                     ))}
                   </ul>
                   <Button
-                    className="w-full transition-all hover:scale-105 h-9 text-xs" 
-                    variant={isFree ? "outline" : "default"}
-                    onClick={() => handleSubscribe(plan.name, displayPrice!)}
-                    disabled={loading === plan.name || currencyLoading || isFree}
+                    className={`w-full transition-all hover:scale-105 h-9 text-xs ${isComingSoon ? 'opacity-60' : ''}`}
+                    variant={isFree || isComingSoon ? "outline" : "default"}
+                    onClick={() => !isComingSoon && handleSubscribe(plan.name, displayPrice!)}
+                    disabled={loading === plan.name || currencyLoading || isFree || isComingSoon}
                   >
                     {loading === plan.name 
                       ? "Processing..." 
                       : currencyLoading
                       ? "Loading..."
+                      : isComingSoon
+                      ? "Coming Soon"
                       : isFree 
                       ? "Current Plan" 
                       : "Subscribe Now"}
