@@ -343,11 +343,6 @@ export default function Pricing() {
                     MOST POPULAR
                   </div>
                 )}
-                {isComingSoon && (
-                  <div className="absolute -top-2.5 left-1/2 -translate-x-1/2 bg-amber-500 text-white text-[10px] font-bold px-3 py-0.5 rounded-full">
-                    COMING SOON
-                  </div>
-                )}
                 <CardHeader className="pb-3">
                   <CardTitle className="text-xl">{plan.name}</CardTitle>
                   <CardDescription>
