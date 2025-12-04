@@ -82,19 +82,16 @@ export default function Login() {
 
       if (error) throw error;
 
-      // Track login activity
-      if (data.user) {
-        try {
-          await supabase.functions.invoke('track-login-activity', {
-            body: {
-              user_id: data.user.id,
-              login_method: 'email/password',
-              success: true,
-            },
-          });
-        } catch (trackError) {
-          console.error('Error tracking login:', trackError);
-        }
+      // Track login activity (user_id is extracted from JWT token on server)
+      try {
+        await supabase.functions.invoke('track-login-activity', {
+          body: {
+            login_method: 'email/password',
+            success: true,
+          },
+        });
+      } catch (trackError) {
+        console.error('Error tracking login:', trackError);
       }
 
       toast({
