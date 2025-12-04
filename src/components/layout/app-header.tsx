@@ -18,7 +18,7 @@ export function AppHeader() {
   }, [])
 
   return (
-    <header className="flex items-center justify-center p-3 md:p-4 bg-background relative h-18 md:h-20 shrink-0 z-50">
+    <header className="flex items-center justify-center pt-8 md:pt-9 pb-3 md:pb-4 px-3 md:px-4 bg-background relative h-18 md:h-20 shrink-0 z-50">
       <div className="flex items-center space-x-2">
         <img src={iurlLogo} alt="iURL Logo" className="h-7 w-7 md:h-8 md:w-8 rounded-lg" />
         <div>
