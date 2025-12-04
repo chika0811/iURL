@@ -18,11 +18,14 @@ const handler = async (req: Request): Promise<Response> => {
   }
 
   try {
-    const { user_id, login_method, success }: TrackLoginRequest = await req.json();
-
-    // Get IP address and user agent from request headers
-    const ip_address = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
-    const user_agent = req.headers.get('user-agent') || 'unknown';
+    // Verify authorization header exists
+    const authHeader = req.headers.get('Authorization');
+    if (!authHeader) {
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - missing authorization header' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
 
     // Create Supabase client with service role to bypass RLS
     const supabaseAdmin = createClient(
@@ -30,11 +33,30 @@ const handler = async (req: Request): Promise<Response> => {
       Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? ''
     );
 
-    // Insert login activity
+    // Extract and verify user from JWT token
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authError } = await supabaseAdmin.auth.getUser(token);
+
+    if (authError || !user) {
+      console.error('Auth error:', authError);
+      return new Response(
+        JSON.stringify({ error: 'Unauthorized - invalid token' }),
+        { status: 401, headers: { 'Content-Type': 'application/json', ...corsHeaders } }
+      );
+    }
+
+    // Get login details from request body (but NOT user_id - we use the verified token)
+    const { login_method, success }: Omit<TrackLoginRequest, 'user_id'> = await req.json();
+
+    // Get IP address and user agent from request headers
+    const ip_address = req.headers.get('x-forwarded-for') || req.headers.get('x-real-ip') || 'unknown';
+    const user_agent = req.headers.get('user-agent') || 'unknown';
+
+    // Insert login activity using verified user ID from token
     const { error } = await supabaseAdmin
       .from('login_activity')
       .insert({
-        user_id,
+        user_id: user.id,  // Use verified user ID from JWT token
         ip_address,
         user_agent,
         login_method,
@@ -46,7 +68,7 @@ const handler = async (req: Request): Promise<Response> => {
       throw error;
     }
 
-    console.log(`Login activity tracked for user ${user_id}`);
+    console.log(`Login activity tracked for user ${user.id}`);
 
     return new Response(
       JSON.stringify({ success: true }),
