@@ -130,7 +130,7 @@ export default function SubscriptionDashboard() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background pb-14 flex flex-col relative">
+      <div className="min-h-screen bg-background pb-40 flex flex-col relative">
         <FloatingBubbles />
         <AppHeader />
         <div className="flex-1 flex items-center justify-center">
@@ -142,7 +142,7 @@ export default function SubscriptionDashboard() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-14 flex flex-col relative">
+    <div className="min-h-screen bg-background pb-40 flex flex-col relative">
       <FloatingBubbles />
       <AppHeader />
       
