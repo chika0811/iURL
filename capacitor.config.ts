@@ -4,7 +4,6 @@ const config: CapacitorConfig = {
   appId: 'com.dnovit.iurl',
   appName: 'iURL',
   webDir: 'dist',
-  // Production APK build - no development server
   plugins: {
     CapacitorHttp: {
       enabled: true
@@ -18,7 +17,20 @@ const config: CapacitorConfig = {
     },
     Camera: {
       permissions: ["camera", "photos"]
+    },
+    App: {
+      // Deep link configuration for URL interception
+      androidScheme: "https"
     }
+  },
+  // Android deep link configuration
+  android: {
+    allowMixedContent: true,
+    appendUserAgent: "iURL-Security-Scanner"
+  },
+  // iOS deep link configuration  
+  ios: {
+    scheme: "iurl"
   }
 };
 
