@@ -1,5 +1,8 @@
 project_id = "mywbdbgjzfrsqdyqdqul"
 
+[auth]
+pwned_passwords_protection_enabled = true
+
 # Rate limiting configuration for edge functions
 [functions.initialize-paystack-payment]
 verify_jwt = true
