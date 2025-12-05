@@ -1,29 +1,107 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { z } from "https://deno.land/x/zod@v3.22.4/mod.ts";
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Zod schema for URL validation
+const urlSchema = z.object({
+  url: z.string()
+    .min(1, 'URL is required')
+    .max(2048, 'URL must be less than 2048 characters')
+    .refine((url) => {
+      try {
+        new URL(url);
+        return true;
+      } catch {
+        return false;
+      }
+    }, 'Invalid URL format')
+});
+
+// Simple in-memory rate limiter by IP
+const rateLimitMap = new Map<string, { count: number; resetTime: number }>();
+const RATE_LIMIT_WINDOW_MS = 60 * 1000; // 1 minute
+const RATE_LIMIT_MAX_REQUESTS = 10; // 10 requests per minute per IP
+
+function checkRateLimit(ip: string): { allowed: boolean; retryAfter?: number } {
+  const now = Date.now();
+  const record = rateLimitMap.get(ip);
+
+  // Clean up old entries periodically
+  if (rateLimitMap.size > 10000) {
+    for (const [key, value] of rateLimitMap.entries()) {
+      if (value.resetTime < now) {
+        rateLimitMap.delete(key);
+      }
+    }
+  }
+
+  if (!record || record.resetTime < now) {
+    rateLimitMap.set(ip, { count: 1, resetTime: now + RATE_LIMIT_WINDOW_MS });
+    return { allowed: true };
+  }
+
+  if (record.count >= RATE_LIMIT_MAX_REQUESTS) {
+    const retryAfter = Math.ceil((record.resetTime - now) / 1000);
+    return { allowed: false, retryAfter };
+  }
+
+  record.count++;
+  return { allowed: true };
+}
+
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
   }
 
+  // Get client IP for rate limiting
+  const clientIP = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() 
+    || req.headers.get('x-real-ip') 
+    || 'unknown';
+
+  // Check rate limit
+  const rateLimitResult = checkRateLimit(clientIP);
+  if (!rateLimitResult.allowed) {
+    console.log(`Rate limit exceeded for IP: ${clientIP}`);
+    return new Response(
+      JSON.stringify({ error: 'Rate limit exceeded. Please try again later.' }),
+      { 
+        status: 429, 
+        headers: { 
+          ...corsHeaders, 
+          'Content-Type': 'application/json',
+          'Retry-After': String(rateLimitResult.retryAfter || 60)
+        } 
+      }
+    );
+  }
+
   try {
-    const { url } = await req.json();
+    const body = await req.json();
     
-    if (!url) {
+    // Validate input with Zod
+    const validationResult = urlSchema.safeParse(body);
+    if (!validationResult.success) {
+      const errorMessage = validationResult.error.errors[0]?.message || 'Invalid input';
+      console.log(`Validation failed for IP ${clientIP}: ${errorMessage}`);
       return new Response(
-        JSON.stringify({ error: 'URL is required' }),
+        JSON.stringify({ error: errorMessage }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    const { url } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY not configured');
     }
+
+    console.log(`Analyzing URL for IP ${clientIP}: ${url.substring(0, 100)}...`);
 
     // Call Lovable AI to analyze the URL
     const response = await fetch(
@@ -58,6 +136,20 @@ Respond ONLY in this JSON format:
     if (!response.ok) {
       const errorText = await response.text();
       console.error('Lovable AI error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'AI service rate limited. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI service unavailable. Please try again later.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      
       throw new Error(`AI analysis failed: ${response.status}`);
     }
 
@@ -67,6 +159,8 @@ Respond ONLY in this JSON format:
     // Parse AI response
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);
     const aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { riskScore: 0, reason: 'No analysis', threats: [] };
+
+    console.log(`Analysis complete for IP ${clientIP}: riskScore=${aiResult.riskScore}`);
 
     return new Response(
       JSON.stringify(aiResult),
