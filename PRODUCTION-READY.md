@@ -10,6 +10,7 @@
 - [x] Edge functions secured with JWT verification (where needed)
 - [x] RLS policies enabled on all database tables
 - [x] Password strength validation implemented
+- [x] Leaked password protection enabled (Supabase Auth)
 - [x] Login activity tracking enabled
 
 ### Backend & AI Integration
