@@ -97,26 +97,30 @@ serve(async (req) => {
     const { url } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
+
+    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+      throw new Error('AI API key not configured');
     }
 
     console.log(`Analyzing URL for IP ${clientIP}: ${url.substring(0, 100)}...`);
 
-    // Call Lovable AI to analyze the URL
-    const response = await fetch(
-      'https://ai.gateway.lovable.dev/v1/chat/completions',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          model: 'google/gemini-2.5-flash',
-          messages: [{
-            role: 'user',
-            content: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
+    let aiText = '{}';
+    let response;
+
+    // Prefer GEMINI_API_KEY if available (direct connection)
+    if (GEMINI_API_KEY) {
+      response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            contents: [{
+              parts: [{
+                text: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
 
 URL: ${url}
 
@@ -126,16 +130,46 @@ Respond ONLY in this JSON format:
   "reason": "<brief explanation>",
   "threats": ["<threat1>", "<threat2>"]
 }`
-          }],
-          temperature: 0.2,
-          max_tokens: 200
-        })
-      }
-    );
+              }]
+            }]
+          })
+        }
+      );
+    } else {
+      // Fallback to Lovable Gateway
+      response = await fetch(
+        'https://ai.gateway.lovable.dev/v1/chat/completions',
+        {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            model: 'google/gemini-1.5-flash',
+            messages: [{
+              role: 'user',
+              content: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
+
+URL: ${url}
+
+Respond ONLY in this JSON format:
+{
+  "riskScore": <number 0-100>,
+  "reason": "<brief explanation>",
+  "threats": ["<threat1>", "<threat2>"]
+}`
+            }],
+            temperature: 0.2,
+            max_tokens: 200
+          })
+        }
+      );
+    }
 
     if (!response.ok) {
       const errorText = await response.text();
-      console.error('Lovable AI error:', response.status, errorText);
+      console.error('AI service error:', response.status, errorText);
       
       if (response.status === 429) {
         return new Response(
@@ -154,7 +188,13 @@ Respond ONLY in this JSON format:
     }
 
     const data = await response.json();
-    const aiText = data.choices?.[0]?.message?.content || '{}';
+
+    // Parse AI response based on provider
+    if (GEMINI_API_KEY) {
+      aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+    } else {
+      aiText = data.choices?.[0]?.message?.content || '{}';
+    }
     
     // Parse AI response
     const jsonMatch = aiText.match(/\{[\s\S]*\}/);

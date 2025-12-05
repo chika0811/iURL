@@ -24,7 +24,13 @@ async function getAIAnalysis(url: string): Promise<{ riskScore: number; reason: 
   }
 }
 
-export async function calculateScore(url: string): Promise<ScanResult> {
+export async function calculateScore(urlInput: string): Promise<ScanResult> {
+  // Normalize URL to ensure it has a protocol
+  let url = urlInput.trim();
+  if (!url.startsWith('http://') && !url.startsWith('https://')) {
+    url = `https://${url}`;
+  }
+
   // Step 1: Check allowlist first for immediate safety confirmation
   if (isInAllowlist(url)) {
     return {
