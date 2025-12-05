@@ -40,22 +40,83 @@ export default function Home() {
   useEffect(() => {
     const handleScanFromNotification = (event: CustomEvent) => {
       setUrl(event.detail.url)
-      handleScanUrl()
+      handleScanUrl(event.detail.url)
     }
 
     const handleClipboardUrlDetected = (event: CustomEvent) => {
       setUrl(event.detail.url)
-      handleScanUrl(event.detail.url)
+      if (event.detail.result) {
+        // Already scanned, show result
+        setScanResult(event.detail.result)
+        setShowPopup(true)
+      } else {
+        handleScanUrl(event.detail.url)
+      }
+    }
+
+    const handleThreatDetected = (event: CustomEvent) => {
+      const { url: threatUrl, result } = event.detail
+      setUrl(threatUrl)
+      setScanResult(result)
+      setShowPopup(true)
+    }
+
+    const handleViewThreatDetails = (event: CustomEvent) => {
+      const { url: threatUrl, verdict, score } = event.detail
+      setUrl(threatUrl)
+      setScanResult({
+        url: threatUrl,
+        score: Number(score) || 0,
+        verdict: (verdict as 'clean' | 'suspicious' | 'malicious') || 'suspicious',
+        safe: false,
+        reasons: [`Threat detected: ${verdict}`],
+        timestamp: Date.now(),
+        factors: {
+          allowlist: 0,
+          threatFeed: 50,
+          domainSimilarity: 0,
+          certificate: 0,
+          redirects: 0,
+          entropy: 0,
+          behavior: 50,
+          c2: 0
+        }
+      })
+      setShowPopup(true)
+    }
+
+    const handleSafeUrlDetected = (event: CustomEvent) => {
+      const { url: safeUrl } = event.detail
+      // Auto-open safe URLs for premium users
+      if (isPremiumOrBusiness) {
+        window.open(safeUrl, '_blank')
+      }
+    }
+
+    // Listen for service worker messages (web notifications)
+    const handleServiceWorkerMessage = (event: MessageEvent) => {
+      if (event.data?.type === 'THREAT_NOTIFICATION_CLICKED') {
+        setUrl(event.data.url)
+        handleScanUrl(event.data.url)
+      }
     }
 
     window.addEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
     window.addEventListener('clipboardUrlDetected', handleClipboardUrlDetected as EventListener)
+    window.addEventListener('threatDetected', handleThreatDetected as EventListener)
+    window.addEventListener('viewThreatDetails', handleViewThreatDetails as EventListener)
+    window.addEventListener('safeUrlDetected', handleSafeUrlDetected as EventListener)
+    navigator.serviceWorker?.addEventListener('message', handleServiceWorkerMessage)
     
     return () => {
       window.removeEventListener('scanUrlFromNotification', handleScanFromNotification as EventListener)
       window.removeEventListener('clipboardUrlDetected', handleClipboardUrlDetected as EventListener)
+      window.removeEventListener('threatDetected', handleThreatDetected as EventListener)
+      window.removeEventListener('viewThreatDetails', handleViewThreatDetails as EventListener)
+      window.removeEventListener('safeUrlDetected', handleSafeUrlDetected as EventListener)
+      navigator.serviceWorker?.removeEventListener('message', handleServiceWorkerMessage)
     }
-  }, [])
+  }, [isPremiumOrBusiness])
 
   useEffect(() => {
     const initClipboardMonitoring = async () => {

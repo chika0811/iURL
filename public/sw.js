@@ -1,19 +1,32 @@
 // Service Worker for iURL background functionality
 
-const CACHE_NAME = 'iurl-cache-v1'
+const CACHE_NAME = 'iurl-cache-v2'
 const urlsToCache = [
   '/',
-  '/static/css/main.css',
-  '/static/js/main.js'
+  '/index.html'
 ]
 
 // Install event
 self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
-      .then((cache) => {
-        return cache.addAll(urlsToCache)
-      })
+      .then((cache) => cache.addAll(urlsToCache))
+      .then(() => self.skipWaiting())
+  )
+})
+
+// Activate event
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((cacheNames) => {
+      return Promise.all(
+        cacheNames.map((cacheName) => {
+          if (cacheName !== CACHE_NAME) {
+            return caches.delete(cacheName)
+          }
+        })
+      )
+    }).then(() => self.clients.claim())
   )
 })
 
@@ -21,10 +34,7 @@ self.addEventListener('install', (event) => {
 self.addEventListener('fetch', (event) => {
   event.respondWith(
     caches.match(event.request)
-      .then((response) => {
-        // Return cached version or fetch from network
-        return response || fetch(event.request)
-      })
+      .then((response) => response || fetch(event.request))
   )
 })
 
@@ -44,52 +54,58 @@ self.addEventListener('periodicsync', (event) => {
 
 // URL monitoring function
 async function performUrlMonitoring() {
-  try {
-    // Check for new URLs in storage that need scanning
-    const response = await self.registration.sync.register('url-monitoring')
-    console.log('Background URL monitoring performed')
-  } catch (error) {
-    console.error('Background URL monitoring failed:', error)
-  }
+  console.log('Background URL monitoring performed')
 }
 
 // Periodic URL checking
 async function performPeriodicUrlCheck() {
-  try {
-    // Perform periodic security updates
-    console.log('Periodic URL security check performed')
-  } catch (error) {
-    console.error('Periodic URL check failed:', error)
-  }
+  console.log('Periodic URL security check performed')
 }
 
-// Handle push notifications
+// Handle push notifications for threat alerts
 self.addEventListener('push', (event) => {
+  let data = {
+    title: 'iURL Security Alert',
+    body: 'A threat has been detected!',
+    url: null,
+    verdict: 'suspicious'
+  }
+
+  if (event.data) {
+    try {
+      data = { ...data, ...event.data.json() }
+    } catch (e) {
+      data.body = event.data.text()
+    }
+  }
+
   const options = {
-    body: event.data ? event.data.text() : 'URL threat detected!',
-    icon: '/favicon.ico',
-    badge: '/favicon.ico',
-    vibrate: [200, 100, 200],
+    body: data.body,
+    icon: '/iurl-logo.png',
+    badge: '/iurl-logo.png',
+    vibrate: [200, 100, 200, 100, 200],
+    tag: 'threat-alert',
+    requireInteraction: true,
     data: {
-      dateOfArrival: Date.now(),
-      primaryKey: 1
+      url: data.url,
+      verdict: data.verdict,
+      dateOfArrival: Date.now()
     },
     actions: [
       {
-        action: 'explore',
+        action: 'view',
         title: 'View Details',
-        icon: '/favicon.ico'
+        icon: '/iurl-logo.png'
       },
       {
-        action: 'close',
-        title: 'Dismiss',
-        icon: '/favicon.ico'
+        action: 'dismiss',
+        title: 'Dismiss'
       }
     ]
   }
 
   event.waitUntil(
-    self.registration.showNotification('iURL Security Alert', options)
+    self.registration.showNotification(data.title, options)
   )
 })
 
@@ -97,10 +113,61 @@ self.addEventListener('push', (event) => {
 self.addEventListener('notificationclick', (event) => {
   event.notification.close()
 
-  if (event.action === 'explore') {
-    // Open the app
+  const action = event.action
+  const notificationData = event.notification.data
+
+  if (action === 'view' || action === '') {
+    // Open the app with threat details
+    const urlToOpen = notificationData?.url 
+      ? `/?threat=${encodeURIComponent(notificationData.url)}`
+      : '/'
+    
     event.waitUntil(
-      clients.openWindow('/')
+      clients.matchAll({ type: 'window', includeUncontrolled: true })
+        .then((windowClients) => {
+          // Check if there's already a window open
+          for (const client of windowClients) {
+            if (client.url.includes(self.location.origin) && 'focus' in client) {
+              client.postMessage({
+                type: 'THREAT_NOTIFICATION_CLICKED',
+                url: notificationData?.url,
+                verdict: notificationData?.verdict
+              })
+              return client.focus()
+            }
+          }
+          // Open new window if none exists
+          if (clients.openWindow) {
+            return clients.openWindow(urlToOpen)
+          }
+        })
     )
+  }
+})
+
+// Listen for messages from the main app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_THREAT_NOTIFICATION') {
+    const { url, verdict, score } = event.data
+    
+    const title = verdict === 'malicious' 
+      ? '🚨 Malicious URL Detected!' 
+      : '⚠️ Suspicious URL Detected'
+    
+    const options = {
+      body: `Threat Score: ${100 - score}% - ${url.substring(0, 50)}${url.length > 50 ? '...' : ''}`,
+      icon: '/iurl-logo.png',
+      badge: '/iurl-logo.png',
+      vibrate: [200, 100, 200],
+      tag: 'threat-alert',
+      requireInteraction: true,
+      data: { url, verdict, score },
+      actions: [
+        { action: 'view', title: 'View Details' },
+        { action: 'dismiss', title: 'Dismiss' }
+      ]
+    }
+    
+    self.registration.showNotification(title, options)
   }
 })
