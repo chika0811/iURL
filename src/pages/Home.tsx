@@ -313,6 +313,11 @@ export default function Home() {
               placeholder="Paste or enter URL to check for threats..."
               value={url}
               onChange={(e) => setUrl(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && url.trim() && !isScanning) {
+                  handleScanUrl()
+                }
+              }}
               className="text-sm h-11"
             />
             <div className="flex space-x-3">
