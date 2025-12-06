@@ -97,9 +97,8 @@ serve(async (req) => {
     const { url } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+    if (!LOVABLE_API_KEY) {
       console.error('Configuration Error: No AI API keys found');
       throw new Error('AI API key not configured');
     }
@@ -120,88 +119,70 @@ Respond ONLY in this JSON format:
   "threats": ["<threat1>", "<threat2>"]
 }`;
 
-    // Prefer GEMINI_API_KEY if available (direct connection)
-    if (GEMINI_API_KEY) {
-      console.log('Using direct Gemini API connection');
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: systemPrompt }]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
+    // Simple retry mechanism for robustness
+    let retries = 2;
+    while (retries >= 0) {
+      try {
+        console.log(`Connecting to Lovable AI... (Attempts left: ${retries})`);
+
+        // Using 'gpt-4o' for the strongest available analysis via the gateway
+        response = await fetch(
+          'https://ai.gateway.lovable.dev/v1/chat/completions',
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              model: 'gpt-4o',
+              messages: [{
+                role: 'user',
+                content: systemPrompt
+              }],
+              temperature: 0.1, // Lower temperature for more consistent JSON
+              max_tokens: 300
+            })
+          }
+        );
+
+        if (response.ok) break;
+
+        // Log failure but continue if retries left
+        const statusText = await response.clone().text();
+        console.warn(`Attempt failed: ${response.status} - ${statusText}`);
+
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
+          // Don't retry client errors or auth errors
+          break;
         }
-      );
-    } else {
-      console.log('Using Lovable Gateway connection');
-      // Fallback to Lovable Gateway
-      // Using 'gpt-4o-mini' as a standard model name that is widely supported by gateways
-      // This is safer than specific provider prefixes if the gateway abstracts them
-      response = await fetch(
-        'https://ai.gateway.lovable.dev/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'gpt-4o-mini',
-            messages: [{
-              role: 'user',
-              content: systemPrompt
-            }],
-            temperature: 0.2,
-            max_tokens: 200
-          })
-        }
-      );
+
+      } catch (e) {
+        console.warn('Network attempt failed:', e);
+      }
+      
+      retries--;
+      if (retries >= 0) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
     }
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error('AI service error:', response.status, errorText);
-      
-      if (response.status === 429) {
-        return new Response(
-          JSON.stringify({ error: 'AI service rate limited. Please try again later.' }),
-          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      if (response.status === 402) {
-        return new Response(
-          JSON.stringify({ error: 'AI service unavailable. Please try again later.' }),
-          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-        );
-      }
-      
-      throw new Error(`AI analysis failed: ${response.status} - ${errorText.substring(0, 100)}`);
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : 'Network Error';
+      console.error('AI service fatal error:', response?.status, errorText);
+
+      throw new Error(`AI analysis failed after retries: ${response?.status || 'Unknown'}`);
     }
 
     const data = await response.json();
-
-    // Parse AI response based on provider
-    if (GEMINI_API_KEY) {
-      aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    } else {
-      aiText = data.choices?.[0]?.message?.content || '{}';
-    }
+    aiText = data.choices?.[0]?.message?.content || '{}';
     
-    // Parse AI response
+    // Robust parsing
     let aiResult;
     try {
-      // Try to parse simply first
-      aiResult = JSON.parse(aiText);
+      // Clean up markdown code blocks if present (common with LLMs)
+      const cleanJson = aiText.replace(/```json\n?|\n?```/g, '').trim();
+      aiResult = JSON.parse(cleanJson);
     } catch (e) {
-      // If simple parse fails, try to extract JSON from markdown block
+      // Fallback regex extraction
       const jsonMatch = aiText.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         try {
