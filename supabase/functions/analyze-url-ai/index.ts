@@ -99,7 +99,8 @@ serve(async (req) => {
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
 
     if (!LOVABLE_API_KEY) {
-      throw new Error('LOVABLE_API_KEY not configured');
+      console.error('Configuration Error: No AI API keys found');
+      throw new Error('AI API key not configured');
     }
 
     console.log(`Analyzing URL for IP ${clientIP}: ${url.substring(0, 100)}...`);
@@ -126,13 +127,7 @@ Respond ONLY in this JSON format:
   "riskScore": <number 0-100>,
   "reason": "<brief explanation>",
   "threats": ["<threat1>", "<threat2>"]
-}`
-          }],
-          temperature: 0.2,
-          max_tokens: 200
-        })
-      }
-    );
+}`;
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -149,9 +144,31 @@ Respond ONLY in this JSON format:
           JSON.stringify({ error: 'AI service unavailable. Please try again later.' }),
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+
+        if (response.ok) break;
+
+        // Log failure but continue if retries left
+        const statusText = await response.clone().text();
+        console.warn(`Attempt failed: ${response.status} - ${statusText}`);
+
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
+          // Don't retry client errors or auth errors
+          break;
+        }
+
+      } catch (e) {
+        console.warn('Network attempt failed:', e);
       }
       
-      throw new Error(`AI analysis failed: ${response.status}`);
+      retries--;
+      if (retries >= 0) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+    }
+
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : 'Network Error';
+      console.error('AI service fatal error:', response?.status, errorText);
+
+      throw new Error(`AI analysis failed after retries: ${response?.status || 'Unknown'}`);
     }
 
     const data = await response.json();
@@ -175,7 +192,7 @@ Respond ONLY in this JSON format:
   } catch (error) {
     console.error('Error in analyze-url-ai:', error);
     return new Response(
-      JSON.stringify({ error: 'Analysis failed' }),
+      JSON.stringify({ error: 'Analysis failed', details: error.message }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }

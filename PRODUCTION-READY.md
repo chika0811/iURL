@@ -4,7 +4,6 @@
 
 ### Security
 - [x] All API keys stored as Supabase secrets (not hardcoded)
-- [x] Gemini API key: `GEMINI_API_KEY` 
 - [x] Paystack keys: `PAYSTACK_SECRET_KEY`, `PAYSTACK_PUBLIC_KEY`
 - [x] Email service: `RESEND_API_KEY`
 - [x] Edge functions secured with JWT verification (where needed)
@@ -14,7 +13,7 @@
 - [x] Login activity tracking enabled
 
 ### Backend & AI Integration
-- [x] Gemini AI integrated for automatic URL threat analysis
+- [x] AI analysis integrated for automatic URL threat analysis
 - [x] AI analysis runs automatically on every URL scan (60% detectors + 40% AI)
 - [x] Edge function `analyze-url-ai` deployed
 - [x] All edge functions have proper CORS headers
@@ -94,7 +93,7 @@ npx cap open ios
 
 1. **Verify Secrets**: Ensure all secrets are set in Lovable Cloud backend
 2. **Test Payment Flow**: Complete end-to-end payment test
-3. **Test AI Analysis**: Verify Gemini AI is responding correctly
+3. **Test AI Analysis**: Verify AI is responding correctly
 4. **Test on Device**: Install APK/IPA on physical devices
 5. **Test Background Services**: Verify clipboard monitoring works
 6. **Update Version**: Bump version number in package.json
@@ -115,7 +114,6 @@ npx cap open ios
 After deployment, monitor:
 - Edge function logs (backend tab)
 - Payment webhooks (Paystack dashboard)
-- AI usage (Gemini API console)
 - User authentication (backend tab)
 - Subscription status (database queries)
 
@@ -124,7 +122,6 @@ After deployment, monitor:
 ## 🔐 Important Notes
 
 1. **Never commit secrets** - All API keys are in Supabase secrets
-2. **Gemini API runs automatically** - No user interaction needed
+2. **AI runs automatically** - No user interaction needed
 3. **Test payment flow** before production launch
-4. **Monitor AI costs** - Gemini charges per request
-5. **Keep capacitor.config.ts server URL commented** for APK builds
+4. **Keep capacitor.config.ts server URL commented** for APK builds
