@@ -97,19 +97,28 @@ serve(async (req) => {
     const { url } = validationResult.data;
 
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
-    const GEMINI_API_KEY = Deno.env.get('GEMINI_API_KEY');
 
-    if (!LOVABLE_API_KEY && !GEMINI_API_KEY) {
+    if (!LOVABLE_API_KEY) {
       console.error('Configuration Error: No AI API keys found');
       throw new Error('AI API key not configured');
     }
 
     console.log(`Analyzing URL for IP ${clientIP}: ${url.substring(0, 100)}...`);
 
-    let aiText = '{}';
-    let response;
-
-    const systemPrompt = `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
+    // Use Lovable AI Gateway with gemini-2.5-flash-lite for fast, efficient scanning
+    const response = await fetch(
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [{
+            role: 'user',
+            content: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
 
 URL: ${url}
 
@@ -119,50 +128,6 @@ Respond ONLY in this JSON format:
   "reason": "<brief explanation>",
   "threats": ["<threat1>", "<threat2>"]
 }`;
-
-    // Prefer GEMINI_API_KEY if available (direct connection)
-    if (GEMINI_API_KEY) {
-      console.log('Using direct Gemini API connection');
-      response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            contents: [{
-              parts: [{ text: systemPrompt }]
-            }],
-            generationConfig: {
-              responseMimeType: "application/json"
-            }
-          })
-        }
-      );
-    } else {
-      console.log('Using Lovable Gateway connection');
-      // Fallback to Lovable Gateway
-      response = await fetch(
-        'https://ai.gateway.lovable.dev/v1/chat/completions',
-        {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            model: 'google/gemini-1.5-flash',
-            messages: [{
-              role: 'user',
-              content: systemPrompt
-            }],
-            temperature: 0.2,
-            max_tokens: 200
-          })
-        }
-      );
-    }
 
     if (!response.ok) {
       const errorText = await response.text();
@@ -179,40 +144,43 @@ Respond ONLY in this JSON format:
           JSON.stringify({ error: 'AI service unavailable. Please try again later.' }),
           { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
+
+        if (response.ok) break;
+
+        // Log failure but continue if retries left
+        const statusText = await response.clone().text();
+        console.warn(`Attempt failed: ${response.status} - ${statusText}`);
+
+        if (response.status === 400 || response.status === 401 || response.status === 403) {
+          // Don't retry client errors or auth errors
+          break;
+        }
+
+      } catch (e) {
+        console.warn('Network attempt failed:', e);
       }
       
-      throw new Error(`AI analysis failed: ${response.status} - ${errorText.substring(0, 100)}`);
+      retries--;
+      if (retries >= 0) await new Promise(r => setTimeout(r, 1000)); // Wait 1s before retry
+    }
+
+    if (!response || !response.ok) {
+      const errorText = response ? await response.text() : 'Network Error';
+      console.error('AI service fatal error:', response?.status, errorText);
+
+      throw new Error(`AI analysis failed after retries: ${response?.status || 'Unknown'}`);
     }
 
     const data = await response.json();
 
-    // Parse AI response based on provider
-    if (GEMINI_API_KEY) {
-      aiText = data.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-    } else {
-      aiText = data.choices?.[0]?.message?.content || '{}';
-    }
+    // Parse AI response from Lovable Gateway (OpenAI-compatible format)
+    const aiText = data.choices?.[0]?.message?.content || '{}';
     
     // Parse AI response
-    let aiResult;
-    try {
-      // Try to parse simply first
-      aiResult = JSON.parse(aiText);
-    } catch (e) {
-      // If simple parse fails, try to extract JSON from markdown block
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          aiResult = JSON.parse(jsonMatch[0]);
-        } catch (e2) {
-          console.error('Failed to parse AI response:', aiText);
-          aiResult = { riskScore: 0, reason: 'Analysis parsing error', threats: [] };
-        }
-      } else {
-        console.error('No JSON found in AI response:', aiText);
-        aiResult = { riskScore: 0, reason: 'Analysis format error', threats: [] };
-      }
-    }
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    const aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { riskScore: 0, reason: 'No analysis', threats: [] };
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    const aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { riskScore: 0, reason: 'No analysis', threats: [] };
 
     console.log(`Analysis complete for IP ${clientIP}: riskScore=${aiResult.riskScore}`);
 

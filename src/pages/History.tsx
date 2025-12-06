@@ -133,7 +133,7 @@ export default function History() {
   }
 
   return (
-    <div className="min-h-screen bg-background pb-40 flex flex-col relative">
+    <div className="min-h-screen bg-background pb-20 flex flex-col relative">
       <FloatingBubbles />
       <AppHeader />
       
