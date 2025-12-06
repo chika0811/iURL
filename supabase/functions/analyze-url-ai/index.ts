@@ -105,10 +105,20 @@ serve(async (req) => {
 
     console.log(`Analyzing URL for IP ${clientIP}: ${url.substring(0, 100)}...`);
 
-    let aiText = '{}';
-    let response;
-
-    const systemPrompt = `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
+    // Use Lovable AI Gateway with gemini-2.5-flash-lite for fast, efficient scanning
+    const response = await fetch(
+      'https://ai.gateway.lovable.dev/v1/chat/completions',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${LOVABLE_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'google/gemini-2.5-flash-lite',
+          messages: [{
+            role: 'user',
+            content: `Analyze this URL for security threats. Check for phishing, malware, scams, typosquatting, suspicious patterns, and any malicious indicators. Provide a risk score from 0-100 (0=safe, 100=dangerous) and a brief reason.
 
 URL: ${url}
 
@@ -119,31 +129,20 @@ Respond ONLY in this JSON format:
   "threats": ["<threat1>", "<threat2>"]
 }`;
 
-    // Simple retry mechanism for robustness
-    let retries = 2;
-    while (retries >= 0) {
-      try {
-        console.log(`Connecting to Lovable AI... (Attempts left: ${retries})`);
-
-        // Using 'gpt-4o' for the strongest available analysis via the gateway
-        response = await fetch(
-          'https://ai.gateway.lovable.dev/v1/chat/completions',
-          {
-            method: 'POST',
-            headers: {
-              'Authorization': `Bearer ${LOVABLE_API_KEY}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              model: 'gpt-4o',
-              messages: [{
-                role: 'user',
-                content: systemPrompt
-              }],
-              temperature: 0.1, // Lower temperature for more consistent JSON
-              max_tokens: 300
-            })
-          }
+    if (!response.ok) {
+      const errorText = await response.text();
+      console.error('AI service error:', response.status, errorText);
+      
+      if (response.status === 429) {
+        return new Response(
+          JSON.stringify({ error: 'AI service rate limited. Please try again later.' }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      if (response.status === 402) {
+        return new Response(
+          JSON.stringify({ error: 'AI service unavailable. Please try again later.' }),
+          { status: 503, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
 
         if (response.ok) break;
@@ -173,29 +172,15 @@ Respond ONLY in this JSON format:
     }
 
     const data = await response.json();
-    aiText = data.choices?.[0]?.message?.content || '{}';
+
+    // Parse AI response from Lovable Gateway (OpenAI-compatible format)
+    const aiText = data.choices?.[0]?.message?.content || '{}';
     
-    // Robust parsing
-    let aiResult;
-    try {
-      // Clean up markdown code blocks if present (common with LLMs)
-      const cleanJson = aiText.replace(/```json\n?|\n?```/g, '').trim();
-      aiResult = JSON.parse(cleanJson);
-    } catch (e) {
-      // Fallback regex extraction
-      const jsonMatch = aiText.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        try {
-          aiResult = JSON.parse(jsonMatch[0]);
-        } catch (e2) {
-          console.error('Failed to parse AI response:', aiText);
-          aiResult = { riskScore: 0, reason: 'Analysis parsing error', threats: [] };
-        }
-      } else {
-        console.error('No JSON found in AI response:', aiText);
-        aiResult = { riskScore: 0, reason: 'Analysis format error', threats: [] };
-      }
-    }
+    // Parse AI response
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    const aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { riskScore: 0, reason: 'No analysis', threats: [] };
+    const jsonMatch = aiText.match(/\{[\s\S]*\}/);
+    const aiResult = jsonMatch ? JSON.parse(jsonMatch[0]) : { riskScore: 0, reason: 'No analysis', threats: [] };
 
     console.log(`Analysis complete for IP ${clientIP}: riskScore=${aiResult.riskScore}`);
 
